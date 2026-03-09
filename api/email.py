@@ -1,8 +1,11 @@
 """Email utility — Resend.com integration with graceful dev fallback."""
+import logging
 import os
 from typing import Optional
 
 import httpx
+
+logger = logging.getLogger("agentai.email")
 
 RESEND_API_KEY: Optional[str] = os.getenv("RESEND_API_KEY", "").strip() or None
 RESEND_FROM:    str            = os.getenv("RESEND_FROM", "AgentAI <noreply@agentai.co>")
@@ -45,7 +48,7 @@ async def send_reset_email(to_email: str, reset_url: str) -> bool:
     Always returns True to avoid leaking whether an email exists.
     """
     if not RESEND_API_KEY:
-        print(f"[DEV — no RESEND_API_KEY] Reset URL for {to_email}: {reset_url}")
+        logger.info("[DEV — no RESEND_API_KEY] Reset URL for %s: %s", to_email, reset_url)
         return True
 
     payload = {
@@ -63,8 +66,8 @@ async def send_reset_email(to_email: str, reset_url: str) -> bool:
                 json=payload,
             )
             if res.status_code not in (200, 201):
-                print(f"[email] Resend error {res.status_code}: {res.text}")
+                logger.error("Resend error %s: %s", res.status_code, res.text)
             return True          # always return True — no email enumeration
     except Exception as exc:
-        print(f"[email] Send failed: {exc}")
+        logger.error("Email send failed: %s", exc, exc_info=True)
         return True

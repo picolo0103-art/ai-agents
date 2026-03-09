@@ -6,6 +6,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -531,7 +532,7 @@ function handleEvent(ev) {
         document.getElementById('messages').appendChild(m);
       }
       currentText+=ev.text;
-      currentBubble.innerHTML=marked.parse(currentText);
+      currentBubble.innerHTML=DOMPurify.sanitize(marked.parse(currentText));
       scrollBottom(); break;
     case 'end':
       removeTyping();
@@ -542,13 +543,15 @@ function handleEvent(ev) {
       removeTyping(); currentBubble=null; currentText=''; isStreaming=false; setInputEnabled(true); break;
     case 'error': {
       removeTyping();
-      const isConn = ev.message && /connect|timeout|network/i.test(ev.message);
-      const retry  = lastUserMsg
+      const errMsg  = ev.message || 'Erreur inattendue';
+      const isConn  = /démarrage|serveur ia|connect|timeout|network/i.test(errMsg);
+      const isLimit = /moins vite/i.test(errMsg);
+      const retry   = (!isLimit && lastUserMsg)
         ? `<br/><button onclick="retryLastMsg()" style="margin-top:8px;background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit">↺ Réessayer</button>`
         : '';
       appendSystemMsg(isConn
-        ? `⚠️ Le serveur est en cours de démarrage. Patientez quelques secondes puis réessayez.${retry}`
-        : `❌ Erreur : ${ev.message||'Erreur inattendue'}${retry}`);
+        ? `⚠️ ${errMsg}${retry}`
+        : `❌ ${errMsg}${retry}`);
       isStreaming=false; setInputEnabled(true); break;
     }
   }
@@ -557,8 +560,9 @@ function handleEvent(ev) {
 /* ── SEND ── */
 function sendMessage() {
   const inp=document.getElementById('chatInput');
-  const txt=inp.value.trim();
+  let txt=inp.value.trim();
   if(!txt||isStreaming||!ws||ws.readyState!==WebSocket.OPEN) return;
+  if(txt.length>4000) txt=txt.slice(0,4000);   // hard cap — matches server-side
   lastUserMsg = txt;            // save for potential retry
   hideWelcome(); appendUserMsg(txt);
   inp.value=''; inp.style.height='';
@@ -600,7 +604,7 @@ function appendUserMsg(text) {
   addMsgMeta(m); document.getElementById('messages').appendChild(m); scrollBottom();
 }
 function appendSystemMsg(text) {
-  const m=createMsgEl('assistant'); m.querySelector('.msg-bubble').innerHTML=marked.parse(text);
+  const m=createMsgEl('assistant'); m.querySelector('.msg-bubble').innerHTML=DOMPurify.sanitize(marked.parse(text));
   document.getElementById('messages').appendChild(m); scrollBottom();
 }
 function appendTyping() {
@@ -786,7 +790,7 @@ async function openConvDetail(id) {
       const msgs=document.getElementById('messages'); msgs.innerHTML='';
       r.messages.forEach(m=>{
         if(m.role==='user') appendUserMsg(m.content);
-        else { const el=createMsgEl('assistant'); el.querySelector('.msg-bubble').innerHTML=marked.parse(m.content); msgs.appendChild(el); }
+        else { const el=createMsgEl('assistant'); el.querySelector('.msg-bubble').innerHTML=DOMPurify.sanitize(marked.parse(m.content)); msgs.appendChild(el); }
       });
       scrollBottom();
     },400);

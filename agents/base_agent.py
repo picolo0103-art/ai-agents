@@ -16,6 +16,9 @@ class BaseAgent:
     MODEL = "llama-3.1-8b-instant"
     MAX_TOKENS = 2048
     MAX_TOOL_ITERATIONS = 6
+    # Keep only the last N messages to prevent context-window overflow.
+    # 40 messages ≈ 20 turns ≈ ~6 000 tokens of history headroom.
+    MAX_HISTORY = 40
 
     def __init__(self, name: str, system_prompt: str, tools: List[Dict], client_context: str = ""):
         self.name = name
@@ -51,6 +54,9 @@ class BaseAgent:
           {"type": "end"}
         """
         self.conversation.append({"role": "user", "content": user_message})
+        # Prune history to avoid exceeding the model's context window
+        if len(self.conversation) > self.MAX_HISTORY:
+            self.conversation = self.conversation[-self.MAX_HISTORY:]
         messages: List[Dict] = [
             {"role": "system", "content": self.system_prompt}
         ] + list(self.conversation)

@@ -1,8 +1,17 @@
 """FastAPI application — SaaS multi-tenant with auth, profiles, demo mode."""
 import json
+import logging
 import os
 import sys
+import time
 from contextlib import asynccontextmanager
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("agentai")
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,10 +63,10 @@ async def lifespan(app: FastAPI):
             messages=[{"role": "user", "content": "hi"}],
             max_tokens=1,
         )
-        print("✅ Groq connection pre-warmed")
+        logger.info("Groq connection pre-warmed successfully")
     except Exception as _e:
-        print(f"⚠️  Groq pre-warm failed (non-fatal): {_e}")
-    print(f"🚀 {settings.app_name} v{settings.app_version} — SaaS mode")
+        logger.warning("Groq pre-warm failed (non-fatal): %s", _e)
+    logger.info("%s v%s — SaaS mode ready", settings.app_name, settings.app_version)
     yield
 
 
@@ -174,12 +183,24 @@ async def websocket_chat(
         "conversation_id": conversation.id,
     })
 
+    _last_msg_time = 0.0  # per-connection rate limiter
+
     try:
         while True:
             data = await websocket.receive_text()
             payload = json.loads(data)
             msg = payload.get("message", "").strip()
             if not msg: continue
+
+            # Per-message rate limit: max 1 message per second
+            now = time.monotonic()
+            if now - _last_msg_time < 1.0:
+                await websocket.send_json({
+                    "type": "error",
+                    "message": "Envoyez vos messages moins vite 🙏"
+                })
+                continue
+            _last_msg_time = now
 
             if msg.lower() in ("/reset", "reset"):
                 agent.reset()
@@ -202,7 +223,17 @@ async def websocket_chat(
                                     role="assistant", content=full_response)
                         full_response = ""
             except Exception as exc:
-                await websocket.send_json({"type": "error", "message": str(exc)})
+                logger.error("Agent error (user=%s agent=%s): %s",
+                             user.email, agent_type, exc, exc_info=True)
+                # Send a generic message — don't expose internal details to client
+                is_conn = any(k in str(exc).lower()
+                              for k in ("connect", "timeout", "network", "502", "503"))
+                client_msg = (
+                    "Le serveur IA est en cours de démarrage. Réessayez dans quelques secondes."
+                    if is_conn else
+                    "Une erreur est survenue. Réessayez ou rechargez la page."
+                )
+                await websocket.send_json({"type": "error", "message": client_msg})
 
     except WebSocketDisconnect:
         pass

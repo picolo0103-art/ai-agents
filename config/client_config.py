@@ -1,7 +1,10 @@
 """Client configuration loader — reads per-client JSON files from clients/ directory."""
 import json
+import logging
 import os
 from typing import Dict, List, Optional
+
+logger = logging.getLogger("agentai.config")
 
 CLIENTS_DIR = os.path.join(os.path.dirname(__file__), "..", "clients")
 
@@ -22,8 +25,8 @@ def list_clients() -> List[Dict]:
                     "company": data.get("company", ""),
                     "sector": data.get("sector", ""),
                 })
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to load client config %s: %s", filename, exc)
     return clients
 
 
@@ -40,8 +43,8 @@ def load_client(client_id: str) -> Optional[Dict]:
                 data = json.load(f)
             if data.get("id") == client_id or filename == f"{client_id}.json":
                 return data
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to load client config %s: %s", filename, exc)
     return None
 
 
