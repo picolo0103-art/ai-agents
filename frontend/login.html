@@ -42,9 +42,16 @@
     .submit-btn:disabled{opacity:.5;cursor:not-allowed}
     .error-msg{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
     .success-msg{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
+    .forgot-link{text-align:right;margin-top:-8px;margin-bottom:16px;font-size:12px}
+    .forgot-link a{color:var(--text3);text-decoration:none;transition:color .15s}
+    .forgot-link a:hover{color:var(--accent2)}
     .demo-link{text-align:center;margin-top:24px;font-size:13px;color:var(--text3)}
     .demo-link a{color:var(--accent2);text-decoration:none;font-weight:500}
     .demo-link a:hover{text-decoration:underline}
+    /* Forgot panel */
+    #forgotForm{display:none}
+    .back-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-family:inherit;font-size:13px;padding:0;margin-bottom:20px;display:flex;align-items:center;gap:6px;transition:color .15s}
+    .back-btn:hover{color:var(--accent2)}
     @media(max-width:768px){.page{grid-template-columns:1fr}.branding{display:none}.form-side{min-height:100vh}}
   </style>
 </head>
@@ -83,7 +90,17 @@
         <div class="form-sub">Connectez-vous à votre espace entreprise</div>
         <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="vous@entreprise.com" /></div>
         <div class="field"><label>Mot de passe</label><input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+        <div class="forgot-link"><a href="#" onclick="showForgot();return false">Mot de passe oublié ?</a></div>
         <button class="submit-btn" onclick="doLogin()">Se connecter</button>
+      </div>
+
+      <!-- Forgot password -->
+      <div id="forgotForm">
+        <button class="back-btn" onclick="showTab('login')">← Retour à la connexion</button>
+        <div class="form-title">Mot de passe oublié</div>
+        <div class="form-sub">Entrez votre email et nous vous enverrons un lien de réinitialisation.</div>
+        <div class="field"><label>Email</label><input type="email" id="forgotEmail" placeholder="vous@entreprise.com" onkeydown="if(event.key==='Enter')doForgot()" /></div>
+        <button class="submit-btn" id="forgotBtn" onclick="doForgot()">Envoyer le lien</button>
       </div>
 
       <!-- Register -->
@@ -110,6 +127,16 @@
     document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
     document.getElementById('loginForm').style.display    = tab === 'login'    ? '' : 'none';
     document.getElementById('registerForm').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('forgotForm').style.display   = 'none';
+    document.querySelector('.tabs').style.display         = '';
+    clearMessages();
+  }
+
+  function showForgot() {
+    document.getElementById('loginForm').style.display    = 'none';
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('forgotForm').style.display   = '';
+    document.querySelector('.tabs').style.display         = 'none';
     clearMessages();
   }
 
@@ -160,6 +187,26 @@
     localStorage.setItem('tenant',  JSON.stringify(data.tenant));
     showSuccess('Connexion réussie, redirection…');
     setTimeout(() => location.href = '/dashboard', 800);
+  }
+
+  async function doForgot() {
+    clearMessages();
+    const email = document.getElementById('forgotEmail').value.trim();
+    if (!email) return showError('Veuillez entrer votre email');
+    const btn = document.getElementById('forgotBtn');
+    btn.disabled = true; btn.textContent = 'Envoi en cours…';
+    try {
+      const res  = await fetch('/auth/forgot-password', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      showSuccess(data.message || 'Lien envoyé !');
+      btn.textContent = 'Lien envoyé ✓';
+    } catch {
+      showError('Impossible de contacter le serveur');
+      btn.disabled = false; btn.textContent = 'Envoyer le lien';
+    }
   }
 </script>
 </body>

@@ -1,12 +1,14 @@
 """CRUD helpers — one function per operation, thin and testable."""
 import json
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 
 import bcrypt
 from sqlalchemy.orm import Session
 
-from database.models import CompanyProfile, Conversation, DemoSession, Message, Tenant, User
+from database.models import (CompanyProfile, Conversation, DemoSession,
+                              Message, PasswordResetToken, Tenant, User)
 
 
 # ── Password (bcrypt direct — compatible with all versions) ───────────────────
@@ -143,6 +145,43 @@ def delete_conversation(db: Session, conversation_id: str, tenant_id: str) -> bo
     if not c:
         return False
     db.delete(c); db.commit()
+    return True
+
+
+# ── Password Reset ────────────────────────────────────────────────────────────
+
+def create_reset_token(db: Session, user_id: str) -> PasswordResetToken:
+    """Invalidate any previous tokens for this user, then create a fresh one."""
+    db.query(PasswordResetToken)\
+      .filter(PasswordResetToken.user_id == user_id, PasswordResetToken.used == False)\
+      .update({"used": True})
+    db.commit()
+    t = PasswordResetToken(
+        user_id    = user_id,
+        token      = secrets.token_urlsafe(48),
+        expires_at = datetime.utcnow() + timedelta(hours=1),
+    )
+    db.add(t); db.commit(); db.refresh(t)
+    return t
+
+def get_reset_token(db: Session, token: str) -> Optional[PasswordResetToken]:
+    """Return token only if valid (not used + not expired)."""
+    t = db.query(PasswordResetToken).filter(PasswordResetToken.token == token).first()
+    if not t or t.used or t.expires_at < datetime.utcnow():
+        return None
+    return t
+
+def consume_reset_token(db: Session, token: str, new_password: str) -> bool:
+    """Validate token, update password, mark token used. Returns success."""
+    t = get_reset_token(db, token)
+    if not t:
+        return False
+    user = db.query(User).filter(User.id == t.user_id).first()
+    if not user:
+        return False
+    user.hashed_password = hash_password(new_password)
+    t.used = True
+    db.commit()
     return True
 
 

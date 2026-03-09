@@ -3,7 +3,6 @@ import json
 import os
 import sys
 from contextlib import asynccontextmanager
-from typing import Dict
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,7 +46,6 @@ async def lifespan(app: FastAPI):
     init_db()
     print(f"🚀 {settings.app_name} v{settings.app_version} — SaaS mode")
     yield
-    _sessions.clear()
 
 
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
@@ -93,8 +91,11 @@ def login_page():      return _html("login.html")
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard_page():  return _html("dashboard.html")
 
-@app.get("/demo",      response_class=HTMLResponse)
-def demo_page():       return _html("demo.html")
+@app.get("/demo",           response_class=HTMLResponse)
+def demo_page():            return _html("demo.html")
+
+@app.get("/reset-password", response_class=HTMLResponse)
+def reset_password_page():  return _html("reset-password.html")
 
 
 # ── Health ─────────────────────────────────────────────────────────────────────

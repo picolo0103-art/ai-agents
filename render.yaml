@@ -29,10 +29,16 @@ services:
           name: agentai-db
           property: connectionString
 
-      # CORS — set to your real Render URL once deployed, e.g.:
-      # https://agentai-api.onrender.com
-      # Leave empty to allow all origins (dev/testing only)
+      # CORS — set to your real Render URL once deployed
       - key: ALLOWED_ORIGINS
+        sync: false
+
+      # Public URL of this service — used in password-reset emails
+      - key: APP_URL
+        sync: false
+
+      # Resend.com API key — for transactional emails (optional, logs to console if missing)
+      - key: RESEND_API_KEY
         sync: false
 
       - key: APP_NAME

@@ -182,3 +182,17 @@ class Message(Base):
     created_at      = Column(DateTime, default=datetime.utcnow)
 
     conversation = relationship("Conversation", back_populates="messages")
+
+
+class PasswordResetToken(Base):
+    """Single-use, expiring token for password reset."""
+    __tablename__ = "password_reset_tokens"
+
+    id         = Column(String(36), primary_key=True, default=_uuid)
+    user_id    = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    token      = Column(String(64), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used       = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")

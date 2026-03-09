@@ -1,12 +1,17 @@
-"""Register / Login / Me / Logout endpoints."""
+"""Register / Login / Me / Logout / Forgot-password endpoints."""
 import re
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 from sqlalchemy.orm import Session
 
+_EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
+
 from api.auth import clear_auth_cookie, create_token, get_current_user, set_auth_cookie
+from api.email import APP_URL, send_reset_email
 from api.limiter import limiter
-from database.crud import authenticate, create_tenant, create_user, get_tenant_by_slug, get_user_by_email
+from database.crud import (authenticate, consume_reset_token, create_reset_token,
+                            create_tenant, create_user, get_tenant_by_slug,
+                            get_user_by_email)
 from database.database import get_db
 from database.models import User
 
@@ -15,15 +20,65 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
+def _validate_email(v: str) -> str:
+    v = v.strip().lower()
+    if not _EMAIL_RE.match(v):
+        raise ValueError("Format d'email invalide (ex: vous@entreprise.com)")
+    return v
+
+def _validate_password(v: str) -> str:
+    if len(v) < 8:
+        raise ValueError("Le mot de passe doit faire au moins 8 caractères")
+    return v
+
+
 class RegisterIn(BaseModel):
     company_name: str
     email: str
     password: str
     full_name: str = ""
 
+    @field_validator("email")
+    @classmethod
+    def check_email(cls, v: str) -> str:
+        return _validate_email(v)
+
+    @field_validator("password")
+    @classmethod
+    def check_password(cls, v: str) -> str:
+        return _validate_password(v)
+
+    @field_validator("company_name")
+    @classmethod
+    def check_company(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Le nom de l'entreprise est obligatoire")
+        return v.strip()
+
+
 class LoginIn(BaseModel):
     email: str
     password: str
+
+
+class ForgotPasswordIn(BaseModel):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def check_email(cls, v: str) -> str:
+        return _validate_email(v)
+
+class ResetPasswordIn(BaseModel):
+    token: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Le mot de passe doit faire au moins 8 caractères")
+        return v
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -103,3 +158,27 @@ def logout(response: Response):
 @router.get("/me")
 def me(current_user: User = Depends(get_current_user)):
     return {**_user_out(current_user), "tenant": _tenant_out(current_user.tenant)}
+
+
+@router.post("/forgot-password")
+@limiter.limit("3/minute")
+async def forgot_password(request: Request, req: ForgotPasswordIn, db: Session = Depends(get_db)):
+    """
+    Always returns the same message to prevent email enumeration.
+    In dev (no RESEND_API_KEY), the reset URL is printed to server logs.
+    """
+    user = get_user_by_email(db, req.email)
+    if user:
+        reset_token = create_reset_token(db, user.id)
+        reset_url   = f"{APP_URL}/reset-password?token={reset_token.token}"
+        await send_reset_email(user.email, reset_url)
+    return {"message": "Si cet email est enregistré, vous recevrez un lien de réinitialisation sous peu."}
+
+
+@router.post("/reset-password")
+@limiter.limit("5/minute")
+def reset_password(request: Request, req: ResetPasswordIn, db: Session = Depends(get_db)):
+    ok = consume_reset_token(db, req.token, req.new_password)
+    if not ok:
+        raise HTTPException(400, "Lien invalide ou expiré. Veuillez refaire une demande.")
+    return {"message": "Mot de passe mis à jour avec succès. Vous pouvez vous connecter."}

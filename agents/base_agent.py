@@ -1,4 +1,4 @@
-"""Base agent — Groq (free) with llama-3.3-70b-versatile. Sync + async streaming."""
+"""Base agent — Groq with llama-3.3-70b-specdec (speculative decoding ≈ 3× faster). Sync + async streaming."""
 import json
 import re
 from typing import Any, Dict, List
@@ -8,9 +8,12 @@ from config.settings import settings
 
 
 class BaseAgent:
-    MODEL = "llama-3.3-70b-versatile"
-    MAX_TOKENS = 4096
-    MAX_TOOL_ITERATIONS = 6  # prevent infinite tool-call loops
+    # llama-3.3-70b-specdec uses speculative decoding:
+    #   - same quality as llama-3.3-70b-versatile
+    #   - ~3× lower time-to-first-token (typically < 0.5s)
+    MODEL = "llama-3.3-70b-specdec"
+    MAX_TOKENS = 2048          # 2 k is plenty; was 4 k but added ~1 s latency
+    MAX_TOOL_ITERATIONS = 6    # prevent infinite tool-call loops
 
     def __init__(self, name: str, system_prompt: str, tools: List[Dict], client_context: str = ""):
         self.name = name
