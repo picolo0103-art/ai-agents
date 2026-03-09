@@ -186,7 +186,8 @@
     localStorage.setItem('user',    JSON.stringify(data.user));
     localStorage.setItem('tenant',  JSON.stringify(data.tenant));
     showSuccess('Connexion réussie, redirection…');
-    setTimeout(() => location.href = '/dashboard', 800);
+    const plan = new URLSearchParams(location.search).get('plan');
+    setTimeout(() => location.href = plan ? `/dashboard?plan=${plan}` : '/dashboard', 800);
   }
 
   async function doForgot() {

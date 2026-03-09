@@ -417,6 +417,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadMiniStats();
   loadRecentConversations();
   if (!localStorage.getItem('onboarding_seen')) showOnboarding();
+
+  // Handle post-checkout redirect & auto-upgrade from pricing page
+  const params = new URLSearchParams(location.search);
+  if (params.get('checkout') === 'success') {
+    appendSystemMsg('🎉 Abonnement activé ! Bienvenue sur le plan Pro. Accès illimité débloqué.');
+    history.replaceState({}, '', '/dashboard');
+  } else if (params.get('checkout') === 'canceled') {
+    appendSystemMsg('ℹ️ Paiement annulé. Vous restez sur le plan Gratuit.');
+    history.replaceState({}, '', '/dashboard');
+  } else if (params.get('plan')) {
+    // Redirected from pricing page after login → auto-trigger checkout
+    const plan = params.get('plan');
+    history.replaceState({}, '', '/dashboard');
+    await startUpgrade(plan);
+  }
 });
 
 /* ── MOBILE ── */
@@ -554,7 +569,29 @@ function handleEvent(ev) {
         : `❌ ${errMsg}${retry}`);
       isStreaming=false; setInputEnabled(true); break;
     }
+    case 'limit_reached': {
+      removeTyping();
+      const upgradeBtn = `<br/><button onclick="startUpgrade()" style="margin-top:8px;background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;border:none;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">🚀 Passer au plan Pro — 49€/mois</button>`;
+      appendSystemMsg(`🔒 ${ev.message || 'Limite mensuelle atteinte.'}${upgradeBtn}`);
+      isStreaming=false; setInputEnabled(true); break;
+    }
   }
+}
+
+async function startUpgrade(plan='pro') {
+  try {
+    const res  = await fetch('/billing/checkout?plan='+plan, {method:'POST'});
+    const data = await res.json();
+    if (data.checkout_url) window.location.href = data.checkout_url;
+  } catch(e) { appendSystemMsg('❌ Erreur lors de la redirection vers le paiement.'); }
+}
+
+async function openBillingPortal() {
+  try {
+    const res  = await fetch('/billing/portal', {method:'POST'});
+    const data = await res.json();
+    if (data.portal_url) window.location.href = data.portal_url;
+  } catch(e) { appendSystemMsg('❌ Impossible d\'ouvrir le portail de facturation.'); }
 }
 
 /* ── SEND ── */

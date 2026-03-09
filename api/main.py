@@ -26,12 +26,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from agents import AutomationAgent, ContentAgent, SalesAgent, SupportAgent
 from api.auth import get_current_user_ws
 from api.routers.auth_router import router as auth_router
+from api.routers.billing_router import router as billing_router
 from api.routers.conversations_router import router as conv_router
 from api.routers.demo_router import router as demo_router
 from api.routers.profile_router import router as profile_router
 from api.routers.stats_router import router as stats_router
 from config.settings import settings
-from database.crud import (add_message, create_conversation, get_profile,
+from database.crud import (add_message, check_and_increment_messages,
+                           create_conversation, get_profile,
                            update_conversation_title)
 from database.database import get_db, init_db
 from database.models import User
@@ -88,6 +90,7 @@ app.add_middleware(
 
 # ── Routers ────────────────────────────────────────────────────────────────────
 app.include_router(auth_router)
+app.include_router(billing_router)
 app.include_router(profile_router)
 app.include_router(demo_router)
 app.include_router(conv_router)
@@ -118,6 +121,12 @@ def demo_page():            return _html("demo.html")
 
 @app.get("/reset-password", response_class=HTMLResponse)
 def reset_password_page():  return _html("reset-password.html")
+
+@app.get("/terms",   response_class=HTMLResponse)
+def terms_page():    return _html("terms.html")
+
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy_page():  return _html("privacy.html")
 
 
 # ── Health ─────────────────────────────────────────────────────────────────────
@@ -205,6 +214,14 @@ async def websocket_chat(
             if msg.lower() in ("/reset", "reset"):
                 agent.reset()
                 await websocket.send_json({"type": "reset"})
+                continue
+
+            # Plan limit check (free = 100 messages/month)
+            if not check_and_increment_messages(db, user.tenant_id):
+                await websocket.send_json({
+                    "type":    "limit_reached",
+                    "message": "Vous avez atteint la limite de 100 messages/mois du plan Gratuit.",
+                })
                 continue
 
             # Persist user message

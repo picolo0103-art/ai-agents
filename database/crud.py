@@ -10,6 +10,9 @@ from sqlalchemy.orm import Session
 from database.models import (CompanyProfile, Conversation, DemoSession,
                               Message, PasswordResetToken, Tenant, User)
 
+# ── Plan limits ───────────────────────────────────────────────────────────────
+PLAN_MSG_LIMIT: dict = {"free": 100, "pro": None, "enterprise": None}
+
 
 # ── Password (bcrypt direct — compatible with all versions) ───────────────────
 
@@ -181,6 +184,82 @@ def consume_reset_token(db: Session, token: str, new_password: str) -> bool:
         return False
     user.hashed_password = hash_password(new_password)
     t.used = True
+    db.commit()
+    return True
+
+
+# ── Billing ───────────────────────────────────────────────────────────────────
+
+def get_tenant_by_stripe_customer(db: Session, customer_id: str) -> Optional[Tenant]:
+    return db.query(Tenant).filter(Tenant.stripe_customer_id == customer_id).first()
+
+
+def update_tenant_subscription(
+    db: Session,
+    tenant_id: str,
+    *,
+    plan: str,
+    stripe_customer_id: Optional[str] = None,
+    stripe_subscription_id: Optional[str] = None,
+    subscription_status: str,
+) -> Optional[Tenant]:
+    t = get_tenant(db, tenant_id)
+    if not t:
+        return None
+    t.plan               = plan
+    t.subscription_status = subscription_status
+    if stripe_customer_id:
+        t.stripe_customer_id = stripe_customer_id
+    if stripe_subscription_id:
+        t.stripe_subscription_id = stripe_subscription_id
+    db.commit()
+    db.refresh(t)
+    return t
+
+
+def check_and_increment_messages(db: Session, tenant_id: str) -> bool:
+    """Increment monthly message counter. Returns False if free plan limit reached."""
+    t = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not t:
+        return True  # don't block unknown tenants
+
+    now = datetime.utcnow()
+
+    # Reset monthly counter when the calendar month changes
+    reset_at = t.messages_reset_at
+    if reset_at is None or reset_at.month != now.month or reset_at.year != now.year:
+        t.messages_this_month = 0
+        t.messages_reset_at   = now
+
+    plan  = t.plan or "free"
+    limit = PLAN_MSG_LIMIT.get(plan)
+
+    if limit is not None and (t.messages_this_month or 0) >= limit:
+        db.commit()
+        return False
+
+    t.messages_this_month = (t.messages_this_month or 0) + 1
+    db.commit()
+    return True
+
+
+# ── Email verification ─────────────────────────────────────────────────────────
+
+def create_verify_token(db: Session, user_id: str) -> str:
+    token = secrets.token_urlsafe(32)
+    u = db.query(User).filter(User.id == user_id).first()
+    if u:
+        u.email_verify_token = token
+        db.commit()
+    return token
+
+
+def consume_verify_token(db: Session, token: str) -> bool:
+    u = db.query(User).filter(User.email_verify_token == token).first()
+    if not u:
+        return False
+    u.email_verified     = True
+    u.email_verify_token = None
     db.commit()
     return True
 

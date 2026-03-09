@@ -7,11 +7,11 @@ from sqlalchemy.orm import Session
 _EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
 
 from api.auth import clear_auth_cookie, create_token, get_current_user, set_auth_cookie
-from api.email import APP_URL, send_reset_email
+from api.email import APP_URL, send_reset_email, send_verify_email
 from api.limiter import limiter
-from database.crud import (authenticate, consume_reset_token, create_reset_token,
-                            create_tenant, create_user, get_tenant_by_slug,
-                            get_user_by_email)
+from database.crud import (authenticate, consume_reset_token, consume_verify_token,
+                            create_reset_token, create_tenant, create_user,
+                            create_verify_token, get_tenant_by_slug, get_user_by_email)
 from database.database import get_db
 from database.models import User
 
@@ -123,11 +123,18 @@ def register(request: Request, req: RegisterIn, response: Response, db: Session 
     token  = create_token(user.email)
     set_auth_cookie(response, token)
 
+    # Send email verification link (non-blocking, fails silently)
+    verify_token = create_verify_token(db, user.id)
+    verify_url   = f"{APP_URL}/auth/verify-email?token={verify_token}"
+    import asyncio
+    asyncio.create_task(send_verify_email(user.email, verify_url))
+
     return {
         "access_token": token,
         "token_type":   "bearer",
         "user":         _user_out(user),
         "tenant":       _tenant_out(tenant),
+        "email_verification_sent": True,
     }
 
 
@@ -158,6 +165,15 @@ def logout(response: Response):
 @router.get("/me")
 def me(current_user: User = Depends(get_current_user)):
     return {**_user_out(current_user), "tenant": _tenant_out(current_user.tenant)}
+
+
+@router.get("/verify-email")
+def verify_email(token: str, db: Session = Depends(get_db)):
+    """Consume the one-time email verification token."""
+    ok = consume_verify_token(db, token)
+    if not ok:
+        raise HTTPException(400, "Lien invalide ou expiré. Reconnectez-vous pour recevoir un nouveau lien.")
+    return {"message": "Email vérifié avec succès ! Vous pouvez maintenant utiliser toutes les fonctionnalités."}
 
 
 @router.post("/forgot-password")

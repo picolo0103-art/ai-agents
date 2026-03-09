@@ -340,7 +340,7 @@
         <div class="pricing-feat">Mode démo public</div>
         <div class="pricing-feat">Support prioritaire</div>
       </div>
-      <a href="/login" class="pricing-btn primary">Essayer 14 jours gratuits</a>
+      <a href="#" onclick="startCheckout('pro');return false;" class="pricing-btn primary">Essayer 14 jours gratuits</a>
     </div>
     <!-- Enterprise -->
     <div class="pricing-card">
@@ -378,9 +378,28 @@
     <a href="#pricing">Tarifs</a>
     <a href="/demo">Démo</a>
     <a href="/login">Connexion</a>
+    <a href="/terms">CGU</a>
+    <a href="/privacy">Confidentialité</a>
   </div>
   <div>© 2026 AgentAI Platform — Propulsé par Groq & FastAPI</div>
 </footer>
+
+<script>
+async function startCheckout(plan) {
+  try {
+    const res = await fetch('/billing/checkout?plan=' + plan, {method: 'POST'});
+    if (res.status === 401) {
+      window.location.href = '/login?plan=' + plan;
+      return;
+    }
+    const data = await res.json();
+    if (data.checkout_url) window.location.href = data.checkout_url;
+    else window.location.href = '/login?plan=' + plan;
+  } catch(e) {
+    window.location.href = '/login?plan=' + plan;
+  }
+}
+</script>
 
 <script>
   // Show mobile CTA button

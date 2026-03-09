@@ -23,3 +23,26 @@ def get_db():
 def init_db():
     from database import models  # noqa: F401 — import to register models
     Base.metadata.create_all(bind=engine)
+    _migrate_db()
+
+
+def _migrate_db():
+    """Add new columns to existing tables without Alembic (idempotent)."""
+    from sqlalchemy import text
+    new_columns = [
+        ("tenants", "plan",                   "VARCHAR(20)  DEFAULT 'free'"),
+        ("tenants", "stripe_customer_id",     "VARCHAR(100)"),
+        ("tenants", "stripe_subscription_id", "VARCHAR(100)"),
+        ("tenants", "subscription_status",    "VARCHAR(30)  DEFAULT 'inactive'"),
+        ("tenants", "messages_this_month",    "INTEGER      DEFAULT 0"),
+        ("tenants", "messages_reset_at",      "TIMESTAMP"),
+        ("users",   "email_verified",         "BOOLEAN      DEFAULT FALSE"),
+        ("users",   "email_verify_token",     "VARCHAR(64)"),
+    ]
+    with engine.connect() as conn:
+        for table, col, col_type in new_columns:
+            try:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                conn.commit()
+            except Exception:
+                conn.rollback()  # column already exists — safe to ignore

@@ -23,6 +23,14 @@ class Tenant(Base):
     is_active  = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # ── Billing ──────────────────────────────────────────────────────────
+    plan                   = Column(String(20),  default="free")          # free | pro | enterprise
+    stripe_customer_id     = Column(String(100), nullable=True, index=True)
+    stripe_subscription_id = Column(String(100), nullable=True)
+    subscription_status    = Column(String(30),  default="inactive")      # trialing | active | canceled | past_due
+    messages_this_month    = Column(Integer,     default=0)
+    messages_reset_at      = Column(DateTime,    default=datetime.utcnow)
+
     users          = relationship("User",           back_populates="tenant", cascade="all, delete-orphan")
     profile        = relationship("CompanyProfile", back_populates="tenant", uselist=False, cascade="all, delete-orphan")
     demo_sessions  = relationship("DemoSession",    back_populates="tenant", cascade="all, delete-orphan")
@@ -40,6 +48,10 @@ class User(Base):
     full_name       = Column(String(200), default="")
     is_admin        = Column(Boolean, default=True)
     created_at      = Column(DateTime, default=datetime.utcnow)
+
+    # ── Email verification ────────────────────────────────────────────────
+    email_verified      = Column(Boolean,     default=False)
+    email_verify_token  = Column(String(64),  nullable=True, index=True)
 
     tenant        = relationship("Tenant", back_populates="users")
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
