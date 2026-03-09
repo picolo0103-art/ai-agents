@@ -404,11 +404,18 @@
 
     ws.onerror = () => {
       removeTyping();
-      appendSystemMsg('⚠️ Connexion perdue. Rechargez la page.');
+      // Don't show error here — onclose will fire right after with more context
     };
 
-    ws.onclose = () => {
+    ws.onclose = (e) => {
       setInputEnabled(false);
+      if (e.code === 4004) {
+        appendSystemMsg('⚠️ Session expirée. <a href="/demo" style="color:#6366f1;text-decoration:none;font-weight:600">↺ Relancer une démo</a>');
+      } else if (e.code !== 1000) {
+        // Unexpected close — auto-reconnect
+        appendSystemMsg('🔄 Reconnexion en cours…');
+        setTimeout(() => { if (sessionId) connectWS(sessionId); }, 3000);
+      }
     };
   }
 

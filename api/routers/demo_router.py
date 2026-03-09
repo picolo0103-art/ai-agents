@@ -69,7 +69,11 @@ async def demo_ws(websocket: WebSocket, session_id: str, db: Session = Depends(g
             data = await websocket.receive_text()
             msg  = json.loads(data).get("message", "").strip()
             if not msg: continue
-            async for event in agent.chat_stream(msg):
-                await websocket.send_json(event)
+            try:
+                async for event in agent.chat_stream(msg):
+                    await websocket.send_json(event)
+            except Exception as exc:
+                # Send structured error — frontend shows it inline, WS stays open
+                await websocket.send_json({"type": "error", "message": str(exc)})
     except WebSocketDisconnect:
         pass
