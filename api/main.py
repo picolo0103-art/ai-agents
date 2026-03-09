@@ -44,6 +44,19 @@ FRONTEND = os.path.join(os.path.dirname(__file__), "..", "frontend")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    # Pre-warm Groq HTTP connection so the first user request doesn't fail
+    # after a Render free-tier cold start (service spins down after 15 min).
+    try:
+        from groq import AsyncGroq
+        _gc = AsyncGroq(api_key=settings.groq_api_key)
+        await _gc.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": "hi"}],
+            max_tokens=1,
+        )
+        print("✅ Groq connection pre-warmed")
+    except Exception as _e:
+        print(f"⚠️  Groq pre-warm failed (non-fatal): {_e}")
     print(f"🚀 {settings.app_name} v{settings.app_version} — SaaS mode")
     yield
 

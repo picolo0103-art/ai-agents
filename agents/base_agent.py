@@ -1,10 +1,13 @@
 """Base agent — Groq with llama-3.1-8b-instant (fastest available model). Sync + async streaming."""
+import asyncio
 import json
 import re
 from typing import Any, Dict, List
 
 from groq import AsyncGroq, Groq
 from config.settings import settings
+
+_RETRYABLE = ("connect", "timeout", "network", "temporarily", "service unavailable", "502", "503")
 
 
 class BaseAgent:
@@ -62,13 +65,24 @@ class BaseAgent:
                 kwargs["tools"] = self.tools
                 kwargs["tool_choice"] = "auto"
 
-            stream = await self.async_client.chat.completions.create(
-                model=self.MODEL,
-                max_tokens=self.MAX_TOKENS,
-                messages=messages,
-                stream=True,
-                **kwargs,
-            )
+            # Retry logic — up to 3 attempts on transient connection errors
+            stream = None
+            for attempt in range(3):
+                try:
+                    stream = await self.async_client.chat.completions.create(
+                        model=self.MODEL,
+                        max_tokens=self.MAX_TOKENS,
+                        messages=messages,
+                        stream=True,
+                        **kwargs,
+                    )
+                    break  # success
+                except Exception as exc:
+                    is_retryable = any(k in str(exc).lower() for k in _RETRYABLE)
+                    if attempt < 2 and is_retryable:
+                        await asyncio.sleep(1.5 * (attempt + 1))  # 1.5 s, 3 s
+                        continue
+                    raise  # non-retryable or final attempt
 
             # Accumulate tool calls and text for this iteration
             tool_calls_accum: Dict[int, Dict] = {}
