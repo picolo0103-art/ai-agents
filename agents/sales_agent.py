@@ -271,10 +271,11 @@ Cordialement,
     def _prep_meeting(self, prospect_company: str, main_pain_point: str,
                       contact_role: str = "", meeting_duration: str = "30 min",
                       offer_presented: str = "") -> Dict:
+        greeting = contact_role if contact_role else "je suis ravi(e) d'échanger avec vous"
         return {
             "duration": meeting_duration,
             "script": {
-                "opening": f"Merci de prendre ce temps, {contact_role or 'je suis ravi(e) d\\'échanger avec vous'}. En {meeting_duration}, je voudrais comprendre votre situation sur {main_pain_point}, puis vous montrer comment on a aidé des entreprises similaires à {prospect_company}. Ça vous convient ?",
+                "opening": f"Merci de prendre ce temps, {greeting}. En {meeting_duration}, je voudrais comprendre votre situation sur {main_pain_point}, puis vous montrer comment on a aidé des entreprises similaires à {prospect_company}. Ça vous convient ?",
                 "discovery_questions": [
                     f"Comment gérez-vous actuellement {main_pain_point} chez {prospect_company} ?",
                     "Quelle est votre priorité #1 pour les 6 prochains mois ?",

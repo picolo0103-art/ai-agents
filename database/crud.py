@@ -3,21 +3,22 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional
 
-from passlib.context import CryptContext
+import bcrypt
 from sqlalchemy.orm import Session
 
 from database.models import CompanyProfile, DemoSession, Tenant, User
 
-pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-
-# ── Password ──────────────────────────────────────────────────────────────────
+# ── Password (bcrypt direct — compatible with all versions) ───────────────────
 
 def hash_password(plain: str) -> str:
-    return pwd.hash(plain)
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd.verify(plain, hashed)
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
 
 
 # ── Tenant ────────────────────────────────────────────────────────────────────
