@@ -8,7 +8,7 @@ from typing import Dict
 
 from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -16,10 +16,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from agents import AutomationAgent, ContentAgent, SalesAgent, SupportAgent
 from api.auth import get_current_user_ws
 from api.routers.auth_router import router as auth_router
+from api.routers.conversations_router import router as conv_router
 from api.routers.demo_router import router as demo_router
 from api.routers.profile_router import router as profile_router
+from api.routers.stats_router import router as stats_router
 from config.settings import settings
-from database.crud import get_profile
+from database.crud import (add_message, create_conversation, get_profile,
+                           update_conversation_title)
 from database.database import get_db, init_db
 from database.models import User
 
@@ -35,7 +38,7 @@ _sessions: Dict[str, object] = {}
 FRONTEND = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
 
-# ── App lifecycle ─────────────────────────────────────────────────────────────
+# ── App lifecycle ──────────────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,22 +49,34 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    allow_credentials=True,
+)
 
-# ── Include routers ───────────────────────────────────────────────────────────
+# ── Routers ────────────────────────────────────────────────────────────────────
 app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(demo_router)
+app.include_router(conv_router)
+app.include_router(stats_router)
 
 
-# ── Static pages ──────────────────────────────────────────────────────────────
+# ── Static pages ───────────────────────────────────────────────────────────────
 
 def _html(name: str) -> HTMLResponse:
-    with open(os.path.join(FRONTEND, name), encoding="utf-8") as f:
-        return HTMLResponse(f.read())
+    path = os.path.join(FRONTEND, name)
+    try:
+        with open(path, encoding="utf-8") as f:
+            return HTMLResponse(f.read())
+    except FileNotFoundError:
+        raise HTTPException(404, f"Page {name} introuvable")
 
 @app.get("/",          response_class=HTMLResponse)
-def root():            return _html("login.html")
+def root():            return _html("home.html")
 
 @app.get("/login",     response_class=HTMLResponse)
 def login_page():      return _html("login.html")
@@ -73,7 +88,7 @@ def dashboard_page():  return _html("dashboard.html")
 def demo_page():       return _html("demo.html")
 
 
-# ── Health ────────────────────────────────────────────────────────────────────
+# ── Health ─────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
 def health():
@@ -98,7 +113,7 @@ def list_agents():
     ]}
 
 
-# ── Authenticated WebSocket ───────────────────────────────────────────────────
+# ── Authenticated WebSocket ────────────────────────────────────────────────────
 
 @app.websocket("/ws/{agent_type}")
 async def websocket_chat(
@@ -110,27 +125,30 @@ async def websocket_chat(
     if agent_type not in AGENT_TYPES:
         await websocket.close(code=4000); return
 
-    # Auth via token query param
     user: User = await get_current_user_ws(token=token, db=db)
     if not user:
         await websocket.close(code=4001); return
 
     await websocket.accept()
-    session_id = str(uuid.uuid4())
 
-    # Load this tenant's company profile from DB
+    # Load tenant's company profile
     profile = get_profile(db, user.tenant_id)
     client_context = profile.to_agent_context() if profile and profile.company_name else ""
 
     agent = AGENT_TYPES[agent_type](client_context=client_context)
-    _sessions[session_id] = agent
+
+    # Create a conversation record
+    conversation = create_conversation(
+        db, user_id=user.id, tenant_id=user.tenant_id, agent_type=agent_type
+    )
 
     await websocket.send_json({
-        "type": "session_created",
-        "session_id": session_id,
-        "agent_name": agent.name,
-        "tenant_name": user.tenant.name,
-        "has_profile": bool(client_context),
+        "type":           "session_created",
+        "session_id":     conversation.id,
+        "agent_name":     agent.name,
+        "tenant_name":    user.tenant.name,
+        "has_profile":    bool(client_context),
+        "conversation_id": conversation.id,
     })
 
     try:
@@ -142,13 +160,26 @@ async def websocket_chat(
 
             if msg.lower() in ("/reset", "reset"):
                 agent.reset()
-                await websocket.send_json({"type": "reset"}); continue
+                await websocket.send_json({"type": "reset"})
+                continue
 
+            # Persist user message
+            add_message(db, conversation_id=conversation.id, role="user", content=msg)
+            update_conversation_title(db, conversation.id, msg)
+
+            # Stream & accumulate assistant response
+            full_response = ""
             try:
                 async for event in agent.chat_stream(msg):
                     await websocket.send_json(event)
+                    if event["type"] == "token":
+                        full_response += event["text"]
+                    elif event["type"] == "end" and full_response:
+                        add_message(db, conversation_id=conversation.id,
+                                    role="assistant", content=full_response)
+                        full_response = ""
             except Exception as exc:
                 await websocket.send_json({"type": "error", "message": str(exc)})
 
     except WebSocketDisconnect:
-        _sessions.pop(session_id, None)
+        _sessions.pop(conversation.id, None)

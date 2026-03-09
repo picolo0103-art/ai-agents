@@ -3,7 +3,7 @@ import json
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from database.database import Base
@@ -143,8 +143,40 @@ class DemoSession(Base):
     company_name = Column(String(200), default="")
     website      = Column(String(500), default="")
     sector       = Column(String(200), default="")
-    context      = Column(Text, default="")          # pre-built agent context
+    context      = Column(Text, default="")
     created_at   = Column(DateTime, default=datetime.utcnow)
     expires_at   = Column(DateTime)
 
     tenant = relationship("Tenant", back_populates="demo_sessions")
+
+
+class Conversation(Base):
+    """A chat session between a user and one agent."""
+    __tablename__ = "conversations"
+
+    id         = Column(String(36), primary_key=True, default=_uuid)
+    user_id    = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    tenant_id  = Column(String(36), ForeignKey("tenants.id"), nullable=False, index=True)
+    agent_type = Column(String(50), nullable=False)
+    title      = Column(String(500), default="")
+    msg_count  = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    messages = relationship("Message", back_populates="conversation",
+                            cascade="all, delete-orphan", order_by="Message.created_at")
+    user   = relationship("User")
+    tenant = relationship("Tenant")
+
+
+class Message(Base):
+    """Single message inside a Conversation."""
+    __tablename__ = "messages"
+
+    id              = Column(String(36), primary_key=True, default=_uuid)
+    conversation_id = Column(String(36), ForeignKey("conversations.id"), nullable=False, index=True)
+    role            = Column(String(20), nullable=False)   # "user" | "assistant"
+    content         = Column(Text, nullable=False)
+    created_at      = Column(DateTime, default=datetime.utcnow)
+
+    conversation = relationship("Conversation", back_populates="messages")

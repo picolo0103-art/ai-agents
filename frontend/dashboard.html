@@ -1,549 +1,806 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>AgentAI — Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242736;--border:#2e3147;--accent:#6366f1;--accent2:#818cf8;--green:#10b981;--yellow:#f59e0b;--red:#ef4444;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--radius:12px}
-    html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text)}
-    .app{display:grid;grid-template-columns:260px 1fr;height:100vh;overflow:hidden}
-    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+    :root{
+      --bg:#0f1117;--surface:#1a1d27;--surface2:#242736;--border:#2e3147;
+      --accent:#6366f1;--accent2:#818cf8;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;
+      --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--sidebar:260px;
+    }
+    html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
 
-    /* ── Sidebar ── */
-    .sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-    .sidebar-header{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
-    .logo{display:flex;align-items:center;gap:10px;margin-bottom:4px}
-    .logo-icon{width:30px;height:30px;background:var(--accent);border-radius:8px;display:grid;place-items:center;font-size:15px}
-    .logo-name{font-size:14px;font-weight:700}
-    .tenant-name{font-size:11px;color:var(--text3);margin-top:2px;padding-left:40px}
-    .nav{flex:1;overflow-y:auto;padding:8px}
-    .nav-section{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);padding:10px 10px 6px}
-    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;margin-bottom:2px;border:1px solid transparent}
+    /* ── LAYOUT ── */
+    .layout{display:flex;height:100vh;overflow:hidden}
+
+    /* ── SIDEBAR ── */
+    .sidebar{width:var(--sidebar);flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;overflow:hidden;transition:transform .25s;z-index:50}
+    .sidebar-top{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+    .sidebar-logo{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:grid;place-items:center;font-size:16px}
+    .logo-name{font-size:14px;font-weight:700;letter-spacing:-.3px}
+    .tenant-info{display:flex;align-items:center;justify-content:space-between}
+    .tenant-name{font-size:12px;font-weight:600;color:var(--text2)}
+    .profile-badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:10px;cursor:pointer;transition:all .15s}
+    .profile-badge.done{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+    .profile-badge.todo{background:rgba(245,158,11,.12);color:var(--yellow);border:1px solid rgba(245,158,11,.3)}
+    .sidebar-nav{flex:1;overflow-y:auto;padding:12px 8px}
+    .nav-section{margin-bottom:20px}
+    .nav-section-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:4px 8px 8px}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:all .15s;font-size:13px;font-weight:500;color:var(--text2);border:none;background:none;width:100%;text-align:left}
     .nav-item:hover{background:var(--surface2);color:var(--text)}
-    .nav-item.active{background:var(--surface2);border-color:var(--accent);color:var(--text)}
-    .nav-item .ni-icon{font-size:16px;width:20px;text-align:center}
-    .nav-item .ni-badge{margin-left:auto;font-size:9px;background:var(--accent);color:#fff;padding:2px 6px;border-radius:20px;font-weight:700}
-    .profile-status{margin:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--yellow);cursor:pointer;transition:all .15s}
-    .profile-status:hover{background:rgba(245,158,11,.15)}
-    .profile-status.complete{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--green)}
-    .sidebar-footer{padding:12px;border-top:1px solid var(--border)}
-    .user-card{display:flex;align-items:center;gap:10px}
-    .user-avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);display:grid;place-items:center;font-size:13px;font-weight:600;flex-shrink:0}
+    .nav-item.active{background:rgba(99,102,241,.12);color:var(--accent2);border:1px solid rgba(99,102,241,.2)}
+    .nav-item .nav-icon{font-size:16px;width:20px;text-align:center}
+    .history-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;cursor:pointer;transition:all .15s}
+    .history-item:hover{background:var(--surface2)}
+    .history-title{font-size:12px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .history-agent{font-size:10px}
+    .history-del{font-size:11px;color:var(--text3);padding:2px 5px;border:none;background:none;cursor:pointer;border-radius:4px;opacity:0;transition:opacity .15s}
+    .history-item:hover .history-del{opacity:1}
+    .history-del:hover{color:var(--red)}
+    .sidebar-bottom{padding:12px 8px;border-top:1px solid var(--border)}
+    .user-card{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px}
+    .user-avatar{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),#a855f7);border-radius:8px;display:grid;place-items:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
     .user-info{flex:1;min-width:0}
-    .user-email{font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .user-role{font-size:10px;color:var(--text3)}
-    .logout-btn{width:24px;height:24px;border:none;background:none;cursor:pointer;color:var(--text3);font-size:14px;display:grid;place-items:center;border-radius:6px;transition:all .15s}
-    .logout-btn:hover{background:var(--surface2);color:var(--red)}
+    .user-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .user-email{font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .logout-btn{font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:5px;transition:color .15s}
+    .logout-btn:hover{color:var(--red)}
 
-    /* ── Main ── */
-    .main{display:flex;flex-direction:column;overflow:hidden;height:100vh}
-    .main-header{padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;min-height:60px}
-    .agent-info{display:flex;align-items:center;gap:12px}
-    .agent-icon-big{font-size:22px}
-    .agent-title{font-size:15px;font-weight:600}
-    .agent-caps{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
-    .chip{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(99,102,241,.12);color:var(--accent2);border:1px solid rgba(99,102,241,.25)}
-    .header-btns{display:flex;gap:8px}
-    .btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:12px;font-family:inherit;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
-    .btn:hover{border-color:var(--accent2);color:var(--text)}
-    .btn-accent{background:var(--accent);border-color:var(--accent);color:#fff}
-    .btn-accent:hover{background:var(--accent2);border-color:var(--accent2)}
+    /* ── MAIN ── */
+    .main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0}
+    .topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;background:var(--surface);gap:12px}
+    .topbar-left{display:flex;align-items:center;gap:12px}
+    .burger{display:none;background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;padding:4px}
+    .agent-title{display:flex;align-items:center;gap:10px}
+    .agent-title-icon{font-size:20px}
+    .agent-title-name{font-size:15px;font-weight:700}
+    .conn-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;white-space:nowrap}
+    .conn-dot{width:7px;height:7px;border-radius:50%;background:var(--green);transition:background .3s}
+    .conn-dot.offline{background:var(--text3)}
+    .conn-dot.connecting{background:var(--yellow);animation:pulse 1s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .topbar-right{display:flex;gap:8px;flex-shrink:0}
+    .topbar-btn{font-size:12px;color:var(--text2);background:none;border:1px solid var(--border);border-radius:7px;padding:6px 12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+    .topbar-btn:hover{color:var(--text);border-color:var(--text3)}
+    .topbar-btn.accent{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3);color:var(--accent2)}
+    .stats-bar{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;overflow-x:auto}
+    .stat-chip{display:flex;align-items:center;gap:8px;padding:10px 20px;border-right:1px solid var(--border);white-space:nowrap;flex-shrink:0}
+    .stat-chip-val{font-size:15px;font-weight:700}
+    .stat-chip-label{font-size:11px;color:var(--text3)}
 
-    /* ── Chat ── */
-    .chat-area{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
-    .welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;gap:16px}
-    .welcome-icon{font-size:52px}
-    .welcome-title{font-size:20px;font-weight:700}
-    .welcome-sub{font-size:13px;color:var(--text2);max-width:360px;line-height:1.65}
-    .suggestion-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;width:100%;max-width:500px;margin-top:8px}
-    .suggestion{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;cursor:pointer;text-align:left;font-size:12px;color:var(--text2);line-height:1.5;transition:all .15s}
-    .suggestion:hover{border-color:var(--accent);color:var(--text)}
-    .suggestion strong{display:block;font-size:12px;color:var(--text);margin-bottom:2px}
-    .message{display:flex;gap:10px;max-width:820px}
-    .message.user{align-self:flex-end;flex-direction:row-reverse}
-    .message.user .bubble{background:var(--accent);color:#fff;border-radius:18px 4px 18px 18px}
-    .message.agent .bubble{background:var(--surface2);border:1px solid var(--border);border-radius:4px 18px 18px 18px}
-    .avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;flex-shrink:0;background:var(--surface2);border:1px solid var(--border)}
-    .msg-body{display:flex;flex-direction:column;gap:4px;min-width:0}
-    .bubble{padding:11px 14px;font-size:13.5px;line-height:1.7;max-width:640px;word-break:break-word}
-    .bubble p{margin-bottom:8px}.bubble p:last-child{margin-bottom:0}
-    .bubble ul,.bubble ol{margin:6px 0 6px 18px}.bubble li{margin-bottom:3px}
-    .bubble h2,.bubble h3{font-size:14px;font-weight:600;margin:10px 0 5px}
-    .bubble pre{background:rgba(0,0,0,.3);border-radius:6px;padding:10px;margin:6px 0;overflow-x:auto}
-    .bubble pre code{background:none;padding:0;font-size:12px}
-    .bubble code{font-family:monospace;font-size:12px;background:rgba(0,0,0,.25);padding:1px 5px;border-radius:3px}
-    .bubble blockquote{border-left:3px solid var(--accent);padding-left:10px;color:var(--text2);margin:6px 0}
-    .bubble table{border-collapse:collapse;width:100%;margin:6px 0;font-size:12px}
-    .bubble th,.bubble td{border:1px solid var(--border);padding:5px 9px;text-align:left}
-    .bubble th{background:rgba(99,102,241,.1);font-weight:600}
-    .cursor{display:inline-block;width:2px;height:13px;background:var(--accent2);margin-left:2px;vertical-align:middle;animation:blink .8s steps(2) infinite}
-    @keyframes blink{0%{opacity:1}50%{opacity:0}}
-    .msg-meta{display:flex;align-items:center;gap:8px}
-    .timestamp{font-size:10px;color:var(--text3)}
-    .copy-btn{font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;font-family:inherit}
-    .copy-btn:hover{background:var(--surface2);color:var(--text2)}
-    .tool-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}
-    .tool-badge{font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid var(--border);display:flex;align-items:center;gap:4px}
-    .tool-badge.running{background:rgba(245,158,11,.1);border-color:var(--yellow);color:var(--yellow);animation:pulse 1.5s ease-in-out infinite}
-    .tool-badge.done{background:rgba(16,185,129,.1);border-color:var(--green);color:var(--green)}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    /* ── CHAT ── */
+    .chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+    .messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px}
+    .messages::-webkit-scrollbar{width:4px}
+    .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+    .msg{display:flex;gap:10px;align-items:flex-start;animation:fadeIn .2s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    .msg.user{flex-direction:row-reverse}
+    .msg-avatar{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:grid;place-items:center;font-size:15px}
+    .msg.user .msg-avatar{background:rgba(99,102,241,.2)}
+    .msg.assistant .msg-avatar{background:linear-gradient(135deg,var(--accent),#a855f7)}
+    .msg-bubble{max-width:72%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.65}
+    .msg.user .msg-bubble{background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.25)}
+    .msg-bubble p{margin:0 0 8px}.msg-bubble p:last-child{margin:0}
+    .msg-bubble ul,.msg-bubble ol{padding-left:18px;margin:6px 0}
+    .msg-bubble li{margin:3px 0}
+    .msg-bubble strong{color:var(--accent2)}
+    .msg-bubble code{background:rgba(0,0,0,.35);border-radius:4px;padding:2px 6px;font-size:12px}
+    .msg-bubble pre{background:rgba(0,0,0,.3);border-radius:8px;padding:12px;overflow-x:auto;margin:8px 0}
+    .msg-bubble h2,.msg-bubble h3{font-size:14px;font-weight:700;margin:10px 0 4px;color:var(--accent2)}
+    .msg-meta{display:flex;gap:8px;align-items:center;margin-top:6px}
+    .msg-time{font-size:10px;color:var(--text3)}
+    .copy-btn{font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;transition:all .15s}
+    .copy-btn:hover{color:var(--text2);background:var(--surface)}
+    .tool-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.18);color:var(--accent2);border-radius:6px;padding:4px 10px;margin:4px 0}
+    .tool-badge.done{background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2);color:#34d399}
+    .typing-wrap{display:flex;gap:10px;align-items:flex-start}
+    .typing-bubble{background:var(--surface2);border:1px solid var(--border);border-radius:12px}
+    .typing{display:flex;gap:5px;align-items:center;padding:13px 16px}
+    .typing span{width:6px;height:6px;border-radius:50%;background:var(--text3);animation:bounce .8s infinite}
+    .typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
 
-    /* ── Input bar ── */
-    .input-bar{padding:14px 20px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0}
-    .input-wrapper{display:flex;gap:10px;align-items:flex-end;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;transition:border-color .15s}
-    .input-wrapper:focus-within{border-color:var(--accent)}
-    textarea{flex:1;background:none;border:none;outline:none;resize:none;color:var(--text);font-family:inherit;font-size:14px;line-height:1.5;max-height:130px;min-height:22px}
-    textarea::placeholder{color:var(--text3)}
-    .send-btn{width:34px;height:34px;border-radius:9px;background:var(--accent);border:none;cursor:pointer;display:grid;place-items:center;flex-shrink:0;color:#fff;font-size:15px;transition:background .15s}
-    .send-btn:hover{background:var(--accent2)}
+    /* welcome */
+    .welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center}
+    .welcome-icon{font-size:48px;margin-bottom:16px}
+    .welcome-title{font-size:22px;font-weight:700;margin-bottom:8px}
+    .welcome-sub{font-size:14px;color:var(--text2);margin-bottom:32px;max-width:420px;line-height:1.6}
+    .quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;width:100%;max-width:600px}
+    .quick-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;text-align:left;transition:all .15s;font-size:13px}
+    .quick-card:hover{border-color:var(--accent);background:rgba(99,102,241,.06)}
+    .quick-card-icon{font-size:18px;margin-bottom:6px}
+    .quick-card-text{color:var(--text2);line-height:1.4}
+
+    /* input */
+    .input-area{border-top:1px solid var(--border);padding:16px 24px;background:var(--surface);flex-shrink:0}
+    .input-row{display:flex;gap:10px;align-items:flex-end}
+    .chat-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-family:inherit;font-size:14px;outline:none;resize:none;max-height:120px;overflow-y:auto;transition:border-color .15s;line-height:1.5}
+    .chat-input:focus{border-color:var(--accent)}
+    .chat-input::placeholder{color:var(--text3)}
+    .chat-input:disabled{opacity:.5}
+    .send-btn{width:40px;height:40px;background:var(--accent);border:none;border-radius:9px;cursor:pointer;display:grid;place-items:center;flex-shrink:0;transition:background .15s}
+    .send-btn:hover:not(:disabled){background:var(--accent2)}
     .send-btn:disabled{opacity:.4;cursor:not-allowed}
-    .input-hint{font-size:11px;color:var(--text3);margin-top:7px;text-align:center}
+    .send-btn svg{width:16px;height:16px;fill:#fff}
+    .input-hint{font-size:11px;color:var(--text3);margin-top:8px;text-align:center}
 
-    /* ── Profile Panel (slide-in) ── */
-    .profile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:flex-start;justify-content:flex-end}
-    .profile-overlay.open{display:flex}
-    .profile-panel{width:520px;height:100vh;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:28px;animation:slideIn .25s ease}
-    @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
-    .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-    .panel-title{font-size:18px;font-weight:700}
-    .panel-close{width:32px;height:32px;border:none;background:var(--surface2);border-radius:8px;cursor:pointer;color:var(--text2);font-size:18px;display:grid;place-items:center}
+    /* ── PANELS ── */
+    .panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s}
+    .panel-overlay.open{opacity:1;pointer-events:all}
+    .panel{position:fixed;top:0;right:0;bottom:0;width:480px;background:var(--surface);border-left:1px solid var(--border);z-index:201;transform:translateX(100%);transition:transform .25s;display:flex;flex-direction:column;overflow:hidden}
+    .panel.open{transform:translateX(0)}
+    .panel-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .panel-title{font-size:16px;font-weight:700}
+    .panel-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;transition:color .15s}
     .panel-close:hover{color:var(--text)}
-    .field-group{margin-bottom:20px}
-    .field-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:7px}
-    .field-group input,.field-group textarea,.field-group select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .15s;resize:vertical}
-    .field-group input:focus,.field-group textarea:focus,.field-group select:focus{border-color:var(--accent)}
-    .field-group textarea{min-height:80px}
-    .field-group small{font-size:11px;color:var(--text3);margin-top:4px;display:block}
-    .save-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
-    .save-btn:hover{background:var(--accent2)}
-    .panel-success{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;padding:10px;border-radius:8px;font-size:13px;text-align:center;margin-top:12px;display:none}
+    .panel-body{flex:1;overflow-y:auto;padding:24px}
+    .panel-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0}
 
-    /* No agent selected */
-    .no-agent-msg{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;flex-direction:column;gap:12px;text-align:center}
+    /* profile form */
+    .field{margin-bottom:16px}
+    .field label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px}
+    .field input,.field select,.field textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .15s}
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+    .field textarea{resize:vertical;min-height:80px}
+    .tags-input{display:flex;flex-wrap:wrap;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px}
+    .tags-input:focus-within{border-color:var(--accent)}
+    .tag{background:rgba(99,102,241,.15);color:var(--accent2);border-radius:5px;padding:3px 8px;font-size:12px;display:flex;align-items:center;gap:5px}
+    .tag-del{cursor:pointer;color:var(--text3);font-size:14px;line-height:1}
+    .tag-del:hover{color:var(--red)}
+    .tags-input input{background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:12px;min-width:80px;flex:1}
+    .save-btn{flex:1;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+    .save-btn:hover{background:var(--accent2)}
+    .save-btn:disabled{opacity:.5;cursor:not-allowed}
+    .form-section{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin:20px 0 12px}
+
+    /* stats */
+    .stat-big{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:12px;display:flex;align-items:center;gap:16px}
+    .stat-big-icon{font-size:28px}
+    .stat-big-num{font-size:28px;font-weight:800;letter-spacing:-1px}
+    .stat-big-label{font-size:12px;color:var(--text2);margin-top:2px}
+    .agent-bar{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .agent-bar:last-child{border:none}
+    .agent-bar-name{font-size:13px;flex:1}
+    .agent-bar-count{font-size:12px;color:var(--text2);min-width:30px;text-align:right}
+    .bar-track{flex:2;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+    .bar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .5s}
+
+    /* history */
+    .hist-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;transition:all .15s}
+    .hist-item:hover{border-color:var(--accent);background:rgba(99,102,241,.04)}
+    .hist-item-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+    .hist-icon{font-size:14px}
+    .hist-title{font-size:13px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .hist-del-btn{font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:4px;transition:all .15s}
+    .hist-del-btn:hover{color:var(--red);background:rgba(239,68,68,.08)}
+    .hist-preview{font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .hist-meta{font-size:11px;color:var(--text3);margin-top:6px}
+
+    /* ── ONBOARDING ── */
+    .onboard-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px}
+    .onboard-modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:540px;overflow:hidden;animation:popIn .3s cubic-bezier(.34,1.56,.64,1)}
+    @keyframes popIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+    .onboard-header{padding:32px 32px 24px;text-align:center}
+    .onboard-emoji{font-size:48px;margin-bottom:16px}
+    .onboard-title{font-size:22px;font-weight:700;margin-bottom:8px}
+    .onboard-sub{font-size:14px;color:var(--text2);line-height:1.6}
+    .onboard-steps{padding:0 32px;display:flex;flex-direction:column;gap:14px;margin-bottom:24px}
+    .onboard-step{display:flex;align-items:flex-start;gap:14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px}
+    .onboard-step-num{width:28px;height:28px;background:var(--accent);border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+    .onboard-step-text h4{font-size:13px;font-weight:700;margin-bottom:3px}
+    .onboard-step-text p{font-size:12px;color:var(--text2);line-height:1.5}
+    .onboard-footer{padding:0 32px 32px;display:flex;gap:10px}
+    .onboard-btn{flex:1;padding:12px;border-radius:9px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;border:none}
+    .onboard-btn.primary{background:var(--accent);color:#fff}
+    .onboard-btn.primary:hover{background:var(--accent2)}
+    .onboard-btn.ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+
+    /* ── MOBILE ── */
+    @media(max-width:768px){
+      .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%)}
+      .sidebar.mobile-open{transform:translateX(0)}
+      .burger{display:block}
+      .stats-bar{display:none}
+      .msg-bubble{max-width:88%}
+      .panel{width:100%}
+      .topbar-right .topbar-btn:not(.accent){display:none}
+      .quick-grid{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:480px){
+      .topbar{padding:0 12px}
+      .messages{padding:14px}
+      .input-area{padding:10px 12px}
+      .quick-grid{grid-template-columns:1fr}
+      .welcome{padding:20px}
+    }
   </style>
 </head>
 <body>
 
-<!-- Profile Panel -->
-<div class="profile-overlay" id="profileOverlay" onclick="closeProfileIfOutside(event)">
-  <div class="profile-panel" id="profilePanel">
-    <div class="panel-header">
-      <div class="panel-title">🏢 Profil entreprise</div>
-      <button class="panel-close" onclick="closeProfile()">✕</button>
+<!-- ONBOARDING -->
+<div class="onboard-overlay" id="onboardOverlay" style="display:none">
+  <div class="onboard-modal">
+    <div class="onboard-header">
+      <div class="onboard-emoji">🚀</div>
+      <div class="onboard-title">Bienvenue sur AgentAI !</div>
+      <div class="onboard-sub">Tes agents IA sont prêts. Suis ces 3 étapes pour en tirer le maximum.</div>
     </div>
-    <div class="field-group">
-      <label>Nom de l'entreprise *</label>
-      <input type="text" id="pCompany" placeholder="Mon Entreprise SAS" />
+    <div class="onboard-steps">
+      <div class="onboard-step">
+        <div class="onboard-step-num">1</div>
+        <div class="onboard-step-text"><h4>Configure ton profil entreprise</h4><p>Nom, secteur, services, FAQ — tes agents s'adaptent automatiquement à chaque réponse.</p></div>
+      </div>
+      <div class="onboard-step">
+        <div class="onboard-step-num">2</div>
+        <div class="onboard-step-text"><h4>Choisis un agent IA</h4><p>Support, Sales, Automatisation ou Contenu — chaque agent est spécialisé dans son domaine.</p></div>
+      </div>
+      <div class="onboard-step">
+        <div class="onboard-step-num">3</div>
+        <div class="onboard-step-text"><h4>Lance ta première conversation</h4><p>Utilise les suggestions de prompts pour démarrer immédiatement avec des résultats concrets.</p></div>
+      </div>
     </div>
-    <div class="field-group">
-      <label>Site web</label>
-      <input type="url" id="pWebsite" placeholder="https://monentreprise.fr" />
+    <div class="onboard-footer">
+      <button class="onboard-btn ghost" onclick="closeOnboarding(true)">Ignorer</button>
+      <button class="onboard-btn primary" onclick="closeOnboarding(false)">Configurer mon profil →</button>
     </div>
-    <div class="field-group">
-      <label>Secteur d'activité</label>
-      <input type="text" id="pSector" placeholder="E-commerce, SaaS, Immobilier…" />
-    </div>
-    <div class="field-group">
-      <label>Description</label>
-      <textarea id="pDesc" placeholder="Ce que fait votre entreprise en 2-3 phrases…"></textarea>
-    </div>
-    <div class="field-group">
-      <label>Services / Produits</label>
-      <textarea id="pServices" placeholder="Un service par ligne :&#10;Développement web&#10;Conseil SEO&#10;Formation en ligne"></textarea>
-      <small>Un service par ligne</small>
-    </div>
-    <div class="field-group">
-      <label>Clients cibles</label>
-      <textarea id="pTargets" placeholder="Un profil par ligne :&#10;PME e-commerce&#10;Startups SaaS&#10;Artisans"></textarea>
-      <small>Un profil par ligne</small>
-    </div>
-    <div class="field-group">
-      <label>Ton de communication</label>
-      <select id="pTone">
-        <option value="professionnel">Professionnel</option>
-        <option value="chaleureux et professionnel">Chaleureux & Professionnel</option>
-        <option value="expert technique">Expert technique</option>
-        <option value="décontracté">Décontracté</option>
-        <option value="formel">Formel</option>
-      </select>
-    </div>
-    <div class="field-group">
-      <label>FAQ & Informations clés</label>
-      <textarea id="pFaq" style="min-height:100px" placeholder="Politique retour : 30 jours&#10;Livraison gratuite dès 80€&#10;Support disponible 9h-18h du lundi au vendredi"></textarea>
-      <small>Ces informations seront utilisées par l'agent Support</small>
-    </div>
-    <div class="field-group">
-      <label>Règles importantes</label>
-      <textarea id="pRules" placeholder="Une règle par ligne :&#10;Ne jamais promettre un remboursement sur les articles soldés&#10;Proposer le code BIENVENUE10 aux nouveaux clients"></textarea>
-      <small>Une règle par ligne — l'agent les respectera impérativement</small>
-    </div>
-    <div class="field-group">
-      <label>Codes promo actifs</label>
-      <textarea id="pCodes" style="min-height:60px" placeholder="Un code par ligne :&#10;BIENVENUE10 (-10% première commande)&#10;ETE2026 (-20% robes d'été)"></textarea>
-    </div>
-    <button class="save-btn" onclick="saveProfile()">💾 Enregistrer le profil</button>
-    <div class="panel-success" id="panelSuccess">✓ Profil enregistré — les agents utilisent maintenant vos données</div>
   </div>
 </div>
 
-<div class="app">
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <div class="logo">
-        <div class="logo-icon">🤖</div>
-        <div class="logo-name">AgentAI Platform</div>
-      </div>
-      <div class="tenant-name" id="tenantName">Chargement…</div>
+<!-- OVERLAY -->
+<div class="panel-overlay" id="overlay" onclick="closeAllPanels()"></div>
+
+<!-- PROFILE PANEL -->
+<div class="panel" id="profilePanel">
+  <div class="panel-head"><div class="panel-title">🏢 Profil entreprise</div><button class="panel-close" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body">
+    <div class="form-section">Identité</div>
+    <div class="field"><label>Nom de l'entreprise</label><input id="pName" type="text" placeholder="ex : Acme Corp"/></div>
+    <div class="field"><label>Site web</label><input id="pWebsite" type="text" placeholder="ex : acme.com"/></div>
+    <div class="field"><label>Secteur d'activité</label>
+      <select id="pSector"><option value="">-- Choisir --</option>
+        <option>SaaS / Logiciel</option><option>E-commerce</option><option>Conseil & Services</option>
+        <option>Immobilier</option><option>Finance / Fintech</option><option>RH / Recrutement</option>
+        <option>Marketing / Communication</option><option>Industrie & Manufacturing</option>
+        <option>Santé / Medtech</option><option>Formation & Edtech</option><option>Retail</option><option>Autre</option>
+      </select>
     </div>
+    <div class="field"><label>Description de l'offre</label><textarea id="pDesc" rows="3" placeholder="Ce que vous faites en 2-3 phrases…"></textarea></div>
+    <div class="form-section">Commercial</div>
+    <div class="field"><label>Services / Produits <span style="color:var(--text3);font-weight:400">(Entrée pour ajouter)</span></label>
+      <div class="tags-input" id="servicesInput" onclick="focusTagInput(this)"><input type="text" placeholder="Service A…" onkeydown="addTag(event,'services')"/></div></div>
+    <div class="field"><label>Clients cibles</label>
+      <div class="tags-input" id="targetsInput" onclick="focusTagInput(this)"><input type="text" placeholder="PME, E-commerce…" onkeydown="addTag(event,'targets')"/></div></div>
+    <div class="field"><label>Codes promo</label>
+      <div class="tags-input" id="promoInput" onclick="focusTagInput(this)"><input type="text" placeholder="CODE10 -10%…" onkeydown="addTag(event,'promo')"/></div></div>
+    <div class="form-section">Communication</div>
+    <div class="field"><label>Ton de communication</label>
+      <select id="pTone"><option value="professionnel">Professionnel</option><option value="amical">Amical & décontracté</option><option value="formel">Formel</option><option value="expert">Expert & technique</option><option value="bienveillant">Bienveillant & chaleureux</option></select></div>
+    <div class="field"><label>FAQ & infos clés</label><textarea id="pFaq" rows="4" placeholder="Q: Délai de livraison ? R: 3-5 jours…"></textarea></div>
+    <div class="field"><label>Documentation / Règles</label><textarea id="pDocs" rows="3" placeholder="Ne jamais promettre… Toujours mentionner…"></textarea></div>
+    <div class="field"><label>Règles impératives</label>
+      <div class="tags-input" id="rulesInput" onclick="focusTagInput(this)"><input type="text" placeholder="Ne jamais donner de prix sans devis…" onkeydown="addTag(event,'rules')"/></div></div>
+  </div>
+  <div class="panel-footer"><button class="save-btn" onclick="saveProfile()" id="saveBtn">💾 Enregistrer le profil</button></div>
+</div>
 
-    <div id="profileStatusBar" class="profile-status" onclick="openProfile()">
-      ⚠️ Complétez votre profil pour personnaliser vos agents
-    </div>
+<!-- STATS PANEL -->
+<div class="panel" id="statsPanel">
+  <div class="panel-head"><div class="panel-title">📊 Statistiques d'usage</div><button class="panel-close" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body" id="statsBody"><div style="color:var(--text3);text-align:center;padding:40px">Chargement…</div></div>
+</div>
 
-    <div class="nav">
-      <div class="nav-section">Agents IA</div>
-      <div id="navAgents"></div>
+<!-- HISTORY PANEL -->
+<div class="panel" id="histPanel">
+  <div class="panel-head"><div class="panel-title">🕐 Historique</div><button class="panel-close" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body" id="histBody"><div style="color:var(--text3);text-align:center;padding:40px">Chargement…</div></div>
+</div>
 
-      <div class="nav-section" style="margin-top:8px">Compte</div>
-      <div class="nav-item" onclick="openProfile()">
-        <span class="ni-icon">🏢</span> Profil entreprise
+<!-- LAYOUT -->
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo"><div class="logo-icon">🤖</div><div class="logo-name">AgentAI</div></div>
+      <div class="tenant-info">
+        <div class="tenant-name" id="tenantName">—</div>
+        <div class="profile-badge todo" id="profileBadge" onclick="openProfile()">⚙ Profil</div>
       </div>
-      <div class="nav-item" onclick="exportChat()">
-        <span class="ni-icon">⬇️</span> Exporter conversation
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-label">Agents IA</div>
+        <button class="nav-item" id="nav-support"    onclick="selectAgent('support')"><span class="nav-icon">🎧</span> Support Client</button>
+        <button class="nav-item" id="nav-sales"      onclick="selectAgent('sales')"><span class="nav-icon">📈</span> Sales & Prospection</button>
+        <button class="nav-item" id="nav-automation" onclick="selectAgent('automation')"><span class="nav-icon">⚙️</span> Automatisation</button>
+        <button class="nav-item" id="nav-content"    onclick="selectAgent('content')"><span class="nav-icon">✍️</span> Marketing & Contenu</button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Outils</div>
+        <button class="nav-item" onclick="openProfile()"><span class="nav-icon">🏢</span> Profil entreprise</button>
+        <button class="nav-item" onclick="openStats()"><span class="nav-icon">📊</span> Statistiques</button>
+        <button class="nav-item" onclick="openHist()"><span class="nav-icon">🕐</span> Historique</button>
+      </div>
+      <div class="nav-section" id="recentSection" style="display:none">
+        <div class="nav-section-label">Récents</div>
+        <div id="recentList"></div>
       </div>
     </div>
-
-    <div class="sidebar-footer">
+    <div class="sidebar-bottom">
       <div class="user-card">
         <div class="user-avatar" id="userAvatar">?</div>
-        <div class="user-info">
-          <div class="user-email" id="userEmail">—</div>
-          <div class="user-role">Administrateur</div>
-        </div>
-        <button class="logout-btn" onclick="logout()" title="Se déconnecter">⏻</button>
+        <div class="user-info"><div class="user-name" id="userName">—</div><div class="user-email" id="userEmail">—</div></div>
+        <button class="logout-btn" onclick="logout()" title="Déconnexion">✕</button>
       </div>
     </div>
   </aside>
 
-  <!-- Main -->
-  <main class="main">
-    <div class="main-header">
-      <div class="agent-info" id="agentInfo">
-        <div class="no-agent-msg" style="font-size:13px;color:var(--text3)">Sélectionnez un agent</div>
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="burger" onclick="toggleSidebar()">☰</button>
+        <div class="agent-title" id="agentTitle"><span class="agent-title-icon">🤖</span><span class="agent-title-name">Choisir un agent</span></div>
       </div>
-      <div class="header-btns">
-        <button class="btn" id="resetBtn" style="display:none" onclick="resetConversation()">🔄 Réinitialiser</button>
-        <button class="btn" id="exportBtn" style="display:none" onclick="exportChat()">⬇ Exporter</button>
+      <div class="conn-status"><div class="conn-dot offline" id="connDot"></div><span id="connLabel">Déconnecté</span></div>
+      <div class="topbar-right">
+        <button class="topbar-btn" onclick="resetChat()">↺ Reset</button>
+        <button class="topbar-btn accent" onclick="openProfile()">⚙ Profil</button>
       </div>
     </div>
-
-    <div class="chat-area" id="chatArea">
+    <div class="stats-bar" id="statsBar" style="display:none">
+      <div class="stat-chip"><span class="stat-chip-val" id="sc-total">—</span><span class="stat-chip-label">messages</span></div>
+      <div class="stat-chip"><span class="stat-chip-val" id="sc-today">—</span><span class="stat-chip-label">aujourd'hui</span></div>
+      <div class="stat-chip"><span class="stat-chip-val" id="sc-conv">—</span><span class="stat-chip-label">conversations</span></div>
+    </div>
+    <div class="chat-area">
       <div class="welcome" id="welcomeScreen">
-        <div class="welcome-icon">🤖</div>
-        <div class="welcome-title">Votre espace IA personnalisé</div>
-        <div class="welcome-sub">Sélectionnez un agent et complétez votre profil entreprise pour des réponses 100% adaptées à votre activité.</div>
+        <div class="welcome-icon" id="welcomeIcon">🤖</div>
+        <div class="welcome-title" id="welcomeTitle">Sélectionne un agent IA</div>
+        <div class="welcome-sub" id="welcomeSub">Choisis un agent dans la barre latérale pour démarrer une conversation personnalisée avec ta marque.</div>
+        <div class="quick-grid" id="quickGrid" style="display:none"></div>
       </div>
+      <div class="messages" id="messages" style="display:none"></div>
     </div>
-
-    <div class="input-bar">
-      <div class="input-wrapper">
-        <textarea id="msgInput" placeholder="Envoie un message…" rows="1" disabled
-          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>➤</button>
+    <div class="input-area">
+      <div class="input-row">
+        <textarea class="chat-input" id="chatInput" rows="1" placeholder="Posez votre question…" onkeydown="handleKey(event)" oninput="autoResize(this)" disabled></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
       </div>
-      <div class="input-hint">Entrée pour envoyer · Shift+Entrée pour nouvelle ligne · /reset pour réinitialiser</div>
+      <div class="input-hint" id="inputHint">← Sélectionne un agent pour commencer</div>
     </div>
-  </main>
+  </div>
 </div>
 
 <script>
-marked.setOptions({breaks:true, gfm:true});
-
-// ── Auth guard ────────────────────────────────────────────────────────────────
-const token  = localStorage.getItem('token');
-const user   = JSON.parse(localStorage.getItem('user')  || 'null');
-const tenant = JSON.parse(localStorage.getItem('tenant') || 'null');
+/* ── STATE ── */
+const token     = localStorage.getItem('token');
+const userObj   = JSON.parse(localStorage.getItem('user')   || '{}');
+const tenantObj = JSON.parse(localStorage.getItem('tenant') || '{}');
 if (!token) location.href = '/login';
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let ws = null, currentAgent = null, isBusy = false, chatHistory = [];
-let streamMsgEl = null, streamBubbleEl = null, streamBadgesEl = null, streamRaw = '';
-let agents = [];
+let ws = null, currentAgent = null, isStreaming = false;
+let currentBubble = null, currentText = '';
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+const AGENT_META = {
+  support:    {icon:'🎧',name:'Support Client',      desc:'Réponses clients, commandes, tickets'},
+  sales:      {icon:'📈',name:'Sales & Prospection', desc:'Workflow 5 étapes — analyse → email → RDV'},
+  automation: {icon:'⚙️',name:'Automatisation',      desc:'Rapports, données, automatisations'},
+  content:    {icon:'✍️',name:'Marketing & Contenu', desc:'Contenu, campagnes, copywriting'},
+};
+
+const SECTOR_PROMPTS = {
+  'SaaS / Logiciel':      ['Analyse mon ICP et mes clients idéaux','Génère un email cold outreach SaaS','Crée une séquence onboarding utilisateurs','Rédige une étude de cas client'],
+  'E-commerce':           ['Rédige une réponse à un client mécontent','Crée 5 descriptions produits SEO-friendly','Génère un email de panier abandonné','Analyse mes avis clients'],
+  'Conseil & Services':   ['Prépare mon script de découverte client','Rédige une proposition commerciale','Crée du contenu LinkedIn pour des leads','Qualifie ce prospect avec BANT'],
+  'Immobilier':           ['Rédige une annonce immobilière','Prépare un script d\'appel prospect','Crée un email de suivi après visite','Analyse le marché local'],
+  'Marketing / Communication': ['Crée une campagne email complète','Rédige 10 posts LinkedIn','Génère des idées de contenu pour un mois','Analyse la stratégie concurrentielle'],
+  'Finance / Fintech':    ['Explique notre offre simplement','Prépare un deck investisseurs','Génère des FAQs pour nos produits','Crée du contenu éducatif'],
+  default:                ['Que peux-tu faire pour mon entreprise ?','Génère du contenu pour mes réseaux','Analyse mes clients et opportunités','Rédige un email professionnel'],
+};
+
+/* ── BOOT ── */
 window.addEventListener('DOMContentLoaded', async () => {
-  // Header
-  if (user) {
-    document.getElementById('userEmail').textContent = user.email;
-    document.getElementById('userAvatar').textContent = (user.full_name || user.email)[0].toUpperCase();
-  }
-  if (tenant) document.getElementById('tenantName').textContent = tenant.name;
-
-  // Load agents
-  try {
-    const r = await fetch('/agents'); const d = await r.json(); agents = d.agents;
-    renderNav();
-  } catch {}
-
-  // Load profile
-  loadProfile();
+  document.getElementById('userAvatar').textContent  = (userObj.full_name||userObj.email||'?')[0].toUpperCase();
+  document.getElementById('userName').textContent    = userObj.full_name || 'Utilisateur';
+  document.getElementById('userEmail').textContent   = userObj.email || '';
+  document.getElementById('tenantName').textContent  = tenantObj.name || 'Mon entreprise';
+  await loadProfile();
+  loadMiniStats();
+  loadRecentConversations();
+  if (!localStorage.getItem('onboarding_seen')) showOnboarding();
 });
 
-// ── Navigation ─────────────────────────────────────────────────────────────────
-function renderNav() {
-  const c = document.getElementById('navAgents'); c.innerHTML = '';
-  agents.forEach(a => {
-    const d = document.createElement('div');
-    d.className = 'nav-item'; d.id = `nav-${a.type}`; d.onclick = () => selectAgent(a);
-    d.innerHTML = `<span class="ni-icon">${a.icon}</span> ${a.name} <span class="ni-badge">Live</span>`;
-    c.appendChild(d);
+/* ── MOBILE ── */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+
+/* ── AGENT SELECTION ── */
+async function selectAgent(type) {
+  if (currentAgent === type) { if(window.innerWidth<768) closeAllPanels(); return; }
+  currentAgent = type;
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.querySelectorAll('.nav-item[id^="nav-"]').forEach(el=>el.classList.remove('active'));
+  document.getElementById('nav-'+type)?.classList.add('active');
+  const meta = AGENT_META[type];
+  document.getElementById('agentTitle').innerHTML =
+    `<span class="agent-title-icon">${meta.icon}</span><span class="agent-title-name">${meta.name}</span>`;
+  showWelcomeScreen(type);
+  connectWS(type);
+}
+
+function showWelcomeScreen(type) {
+  document.getElementById('welcomeScreen').style.display = 'flex';
+  document.getElementById('messages').style.display = 'none';
+  document.getElementById('messages').innerHTML = '';
+  currentBubble = null; currentText = '';
+  const meta = AGENT_META[type];
+  document.getElementById('welcomeIcon').textContent = meta.icon;
+  document.getElementById('welcomeTitle').textContent = meta.name;
+  document.getElementById('welcomeSub').textContent = meta.desc;
+  const sector = window._profileData?.sector || 'default';
+  const prompts = SECTOR_PROMPTS[sector] || SECTOR_PROMPTS.default;
+  const grid = document.getElementById('quickGrid');
+  grid.innerHTML = '';
+  prompts.forEach(p => {
+    const c = document.createElement('div');
+    c.className = 'quick-card';
+    c.innerHTML = `<div class="quick-card-icon">${promptIcon(p)}</div><div class="quick-card-text">${p}</div>`;
+    c.onclick = () => { hideWelcome(); sendQuick(p); };
+    grid.appendChild(c);
   });
+  grid.style.display = 'grid';
 }
 
-function selectAgent(agent) {
-  if (currentAgent?.type === agent.type) return;
-  currentAgent = agent; chatHistory = [];
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById(`nav-${agent.type}`)?.classList.add('active');
-  document.getElementById('agentInfo').innerHTML = `
-    <div class="agent-icon-big">${agent.icon}</div>
-    <div>
-      <div class="agent-title">${agent.name}</div>
-      <div class="agent-caps">${agent.capabilities.map(c=>`<span class="chip">${c}</span>`).join('')}</div>
-    </div>`;
-  document.getElementById('resetBtn').style.display = 'flex';
-  document.getElementById('exportBtn').style.display = 'flex';
-  clearChat(); showWelcome(agent); connectWS(agent.type);
+function promptIcon(p) {
+  if(p.includes('email'))return'✉️'; if(p.includes('prospect')||p.includes('lead'))return'🎯';
+  if(p.includes('contenu')||p.includes('rédige'))return'✍️'; if(p.includes('analys'))return'📊';
+  if(p.includes('client'))return'👥'; if(p.includes('script')||p.includes('appel'))return'📞';
+  return'💡';
+}
+function hideWelcome() {
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('messages').style.display = 'flex';
 }
 
-// ── WebSocket ──────────────────────────────────────────────────────────────────
+/* ── WEBSOCKET ── */
 function connectWS(type) {
-  if (ws) { ws.close(); ws = null; }
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws/${type}?token=${encodeURIComponent(token)}`);
-  ws.onclose = () => { if (!isBusy) enableInput(); };
-  ws.onerror = () => {};
+  if (ws) { ws.close(); ws=null; }
+  setStatus('connecting');
+  const proto = location.protocol==='https:'?'wss':'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws/${type}?token=${token}`);
+  ws.onopen = () => setStatus('connected');
   ws.onmessage = e => handleEvent(JSON.parse(e.data));
+  ws.onerror   = () => setStatus('offline');
+  ws.onclose   = () => { setStatus('offline'); setInputEnabled(false); };
 }
 
-function handleEvent(msg) {
-  switch (msg.type) {
-    case 'session_created': enableInput(); break;
-    case 'tool_call':   ensureStream(); addBadge(msg.name, 'running'); break;
-    case 'tool_result': markBadgeDone(msg.name); break;
-    case 'token':       ensureStream(); appendToken(msg.text); break;
-    case 'end':         finalizeStream(); enableInput(); break;
-    case 'reset':       finalizeStream(); clearChat(); showWelcome(currentAgent); chatHistory=[]; enableInput(); break;
-    case 'error':       finalizeStream(); appendAgentMsg(`⚠️ **Erreur :** ${msg.message}`); enableInput(); break;
+function handleEvent(ev) {
+  switch(ev.type) {
+    case 'session_created':
+      setInputEnabled(true);
+      document.getElementById('inputHint').textContent = 'Shift+Entrée pour un saut de ligne';
+      break;
+    case 'tool_call':
+      removeTyping();
+      const bd = document.createElement('div');
+      bd.className='tool-badge'; bd.id=`tc-${ev.name}`;
+      bd.innerHTML=`⚙️ ${fmtTool(ev.name)} <span style="color:var(--text3)">en cours…</span>`;
+      document.getElementById('messages').appendChild(bd); scrollBottom();
+      break;
+    case 'tool_result':
+      const tb=document.getElementById(`tc-${ev.name}`);
+      if(tb){tb.className='tool-badge done';tb.innerHTML=`✅ ${fmtTool(ev.name)}`;}
+      appendTyping(); break;
+    case 'token':
+      removeTyping(); hideWelcome();
+      if (!currentBubble) {
+        currentText='';
+        const m=createMsgEl('assistant');
+        currentBubble=m.querySelector('.msg-bubble');
+        document.getElementById('messages').appendChild(m);
+      }
+      currentText+=ev.text;
+      currentBubble.innerHTML=marked.parse(currentText);
+      scrollBottom(); break;
+    case 'end':
+      removeTyping();
+      if(currentBubble) addMsgMeta(currentBubble.closest('.msg'));
+      currentBubble=null; currentText=''; isStreaming=false;
+      setInputEnabled(true); loadMiniStats(); loadRecentConversations(); break;
+    case 'reset':
+      removeTyping(); currentBubble=null; currentText=''; isStreaming=false; setInputEnabled(true); break;
+    case 'error':
+      removeTyping(); appendSystemMsg(`❌ ${ev.message||'Erreur inattendue'}`);
+      isStreaming=false; setInputEnabled(true); break;
   }
 }
 
-// ── Streaming ─────────────────────────────────────────────────────────────────
-function ensureStream() {
-  if (streamMsgEl) return;
-  const ca = document.getElementById('chatArea');
-  const d = document.createElement('div'); d.className = 'message agent';
-  const badges = document.createElement('div'); badges.className = 'tool-badges';
-  const bubble = document.createElement('div'); bubble.className = 'bubble';
-  bubble.innerHTML = '<span class="cursor"></span>';
-  const body = document.createElement('div'); body.className = 'msg-body';
-  body.appendChild(badges); body.appendChild(bubble);
-  d.innerHTML = `<div class="avatar">${currentAgent?.icon||'🤖'}</div>`;
-  d.appendChild(body); ca.appendChild(d); ca.scrollTop = ca.scrollHeight;
-  streamMsgEl = d; streamBubbleEl = bubble; streamBadgesEl = badges; streamRaw = '';
-}
-function appendToken(t) {
-  streamRaw += t;
-  streamBubbleEl.innerHTML = marked.parse(streamRaw) + '<span class="cursor"></span>';
-  document.getElementById('chatArea').scrollTop = 99999;
-}
-function finalizeStream() {
-  if (!streamMsgEl) return;
-  const t = streamRaw, time = now();
-  streamBubbleEl.innerHTML = marked.parse(t) || '';
-  const body = streamMsgEl.querySelector('.msg-body');
-  const meta = document.createElement('div'); meta.className = 'msg-meta';
-  meta.innerHTML = `<span class="timestamp">${time}</span><button class="copy-btn" onclick="copyTxt(this,${JSON.stringify(t)})">Copier</button>`;
-  body.appendChild(meta);
-  if (t) chatHistory.push({role:'agent', text:t, time});
-  streamMsgEl = streamBubbleEl = streamBadgesEl = null; streamRaw = '';
-}
-function addBadge(name, state) {
-  if (!streamBadgesEl) return;
-  const b = document.createElement('div'); b.className = `tool-badge ${state}`;
-  b.setAttribute('data-tool', name); b.innerHTML = `⚙️ ${name.replace(/_/g,' ')}`;
-  streamBadgesEl.appendChild(b);
-}
-function markBadgeDone(name) {
-  if (!streamBadgesEl) return;
-  const bs = streamBadgesEl.querySelectorAll(`.tool-badge.running[data-tool="${name}"]`);
-  const last = bs[bs.length-1]; if (!last) return;
-  last.className = 'tool-badge done'; last.innerHTML = `✅ ${name.replace(/_/g,' ')}`;
-}
-
-// ── Messages ──────────────────────────────────────────────────────────────────
-function appendAgentMsg(md) {
-  const ca = document.getElementById('chatArea'), time = now();
-  const d = document.createElement('div'); d.className = 'message agent';
-  d.innerHTML = `<div class="avatar">${currentAgent?.icon||'🤖'}</div>
-    <div class="msg-body">
-      <div class="bubble">${marked.parse(md)}</div>
-      <div class="msg-meta"><span class="timestamp">${time}</span><button class="copy-btn" onclick="copyTxt(this,${JSON.stringify(md)})">Copier</button></div>
-    </div>`;
-  ca.appendChild(d); ca.scrollTop = ca.scrollHeight;
-  chatHistory.push({role:'agent', text:md, time});
-}
-
-// ── Send ──────────────────────────────────────────────────────────────────────
+/* ── SEND ── */
 function sendMessage() {
-  const inp = document.getElementById('msgInput');
-  const text = inp.value.trim();
-  if (!text || !ws || ws.readyState !== WebSocket.OPEN || isBusy) return;
-  document.getElementById('welcomeScreen')?.remove();
-  const time = now();
-  const ca = document.getElementById('chatArea');
-  const d = document.createElement('div'); d.className = 'message user';
-  d.innerHTML = `<div class="avatar">👤</div>
-    <div class="msg-body">
-      <div class="bubble">${escHtml(text)}</div>
-      <div class="msg-meta"><span class="timestamp">${time}</span><button class="copy-btn" onclick="copyTxt(this,${JSON.stringify(text)})">Copier</button></div>
-    </div>`;
-  ca.appendChild(d); ca.scrollTop = ca.scrollHeight;
-  chatHistory.push({role:'user', text, time});
-  ws.send(JSON.stringify({message: text}));
-  inp.value = ''; inp.style.height = 'auto'; disableInput();
+  const inp=document.getElementById('chatInput');
+  const txt=inp.value.trim();
+  if(!txt||isStreaming||!ws||ws.readyState!==WebSocket.OPEN) return;
+  hideWelcome(); appendUserMsg(txt);
+  inp.value=''; inp.style.height='';
+  isStreaming=true; setInputEnabled(false); appendTyping();
+  ws.send(JSON.stringify({message:txt}));
 }
-function handleKey(e) { if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
-function resetConversation() { if (ws&&ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({message:'/reset'})); }
-
-// ── Welcome ───────────────────────────────────────────────────────────────────
-function showWelcome(agent) {
-  const ca = document.getElementById('chatArea');
-  const suggestions = getSuggestions(agent.type);
-  const d = document.createElement('div'); d.className = 'welcome'; d.id = 'welcomeScreen';
-  d.innerHTML = `<div class="welcome-icon">${agent.icon}</div>
-    <div class="welcome-title">${agent.name}</div>
-    <div class="welcome-sub">${agent.description}</div>
-    <div class="suggestion-grid">
-      ${suggestions.map(s=>`<div class="suggestion" onclick="useSug(${JSON.stringify(s.text)})"><strong>${s.title}</strong>${s.text}</div>`).join('')}
-    </div>`;
-  ca.appendChild(d);
-}
-function useSug(t) { document.getElementById('msgInput').value=t; sendMessage(); }
-function getSuggestions(type) {
-  return ({
-    support: [
-      {title:'📦 Commande',text:'Quel est le statut de ma commande CMD-48291 ?'},
-      {title:'↩️ Retour',text:'Comment retourner un article acheté il y a 2 semaines ?'},
-      {title:'💶 Remboursement',text:'Je veux être remboursé pour ma commande CMD-99102.'},
-      {title:'📞 Contact',text:'Comment puis-je joindre le service client ?'},
-    ],
-    sales: [
-      {title:'🔍 Analyser',text:'Analyse mon entreprise et identifie mes clients cibles.'},
-      {title:'🎯 Prospecter',text:'Trouve 5 prospects qualifiés pour mon secteur.'},
-      {title:'✉️ Email',text:'Génère un email de prospection pour une PME e-commerce.'},
-      {title:'📅 RDV',text:'Prépare-moi un script de rendez-vous commercial.'},
-    ],
-    automation: [
-      {title:'📊 Analyse',text:'Analyse les données de ventes Q1 2026.'},
-      {title:'📋 Rapport',text:'Génère un rapport mensuel des KPIs commerciaux.'},
-      {title:'🔔 Alerte',text:"Envoie une alerte critique à l'équipe ops."},
-      {title:'⚙️ Export',text:'Lance un export CSV des clients du mois.'},
-    ],
-    content: [
-      {title:'✍️ Article',text:"Écris un article SEO sur l'IA pour les PME."},
-      {title:'📱 LinkedIn',text:'Crée 5 posts LinkedIn pour notre lancement.'},
-      {title:'🎯 Campagne',text:'Planifie une campagne marketing sur 3 mois.'},
-      {title:'💡 Idées',text:'Génère 10 idées de contenu pour notre blog.'},
-    ],
-  })[type] || [];
+function sendQuick(t){document.getElementById('chatInput').value=t;sendMessage();}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+function autoResize(el){el.style.height='';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function resetChat(){
+  if(!ws||ws.readyState!==WebSocket.OPEN) return;
+  ws.send(JSON.stringify({message:'/reset'}));
+  document.getElementById('messages').innerHTML='';
+  if(currentAgent) showWelcomeScreen(currentAgent);
 }
 
-// ── Profile ───────────────────────────────────────────────────────────────────
-function openProfile()  { document.getElementById('profileOverlay').classList.add('open'); }
-function closeProfile() { document.getElementById('profileOverlay').classList.remove('open'); }
-function closeProfileIfOutside(e) { if (e.target===document.getElementById('profileOverlay')) closeProfile(); }
+/* ── UI ── */
+function createMsgEl(role) {
+  const div=document.createElement('div'); div.className=`msg ${role}`;
+  const av=document.createElement('div'); av.className='msg-avatar';
+  av.textContent=role==='user'?'👤':(AGENT_META[currentAgent]?.icon||'🤖');
+  const bub=document.createElement('div'); bub.className='msg-bubble';
+  div.appendChild(av); div.appendChild(bub); return div;
+}
+function addMsgMeta(msgEl) {
+  const bub=msgEl?.querySelector('.msg-bubble'); if(!bub) return;
+  const meta=document.createElement('div'); meta.className='msg-meta';
+  const t=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  meta.innerHTML=`<span class="msg-time">${t}</span><button class="copy-btn" onclick="copyMsg(this)">Copier</button>`;
+  bub.after(meta);
+}
+function copyMsg(btn) {
+  const bub=btn.closest('.msg').querySelector('.msg-bubble');
+  navigator.clipboard.writeText(bub.innerText||bub.textContent||'');
+  btn.textContent='✓ Copié'; setTimeout(()=>btn.textContent='Copier',2000);
+}
+function appendUserMsg(text) {
+  const m=createMsgEl('user'); m.querySelector('.msg-bubble').textContent=text;
+  addMsgMeta(m); document.getElementById('messages').appendChild(m); scrollBottom();
+}
+function appendSystemMsg(text) {
+  const m=createMsgEl('assistant'); m.querySelector('.msg-bubble').innerHTML=marked.parse(text);
+  document.getElementById('messages').appendChild(m); scrollBottom();
+}
+function appendTyping() {
+  if(document.getElementById('typingEl')) return;
+  const w=document.createElement('div'); w.className='typing-wrap msg assistant'; w.id='typingEl';
+  const av=document.createElement('div'); av.className='msg-avatar'; av.textContent=AGENT_META[currentAgent]?.icon||'🤖';
+  const bub=document.createElement('div'); bub.className='msg-bubble typing-bubble';
+  bub.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
+  w.appendChild(av); w.appendChild(bub); document.getElementById('messages').appendChild(w); scrollBottom();
+}
+function removeTyping(){document.getElementById('typingEl')?.remove();}
+function scrollBottom(){const m=document.getElementById('messages');m.scrollTop=m.scrollHeight;}
+function setInputEnabled(on){document.getElementById('chatInput').disabled=!on;document.getElementById('sendBtn').disabled=!on;}
+function setStatus(s){
+  const dot=document.getElementById('connDot'),lbl=document.getElementById('connLabel');
+  dot.className='conn-dot';
+  if(s==='connected'){lbl.textContent='Connecté';}
+  else if(s==='connecting'){dot.classList.add('connecting');lbl.textContent='Connexion…';}
+  else{dot.classList.add('offline');lbl.textContent='Hors ligne';}
+}
+function fmtTool(n){
+  const m={analyze_company:'🔍 Analyse',research_market:'📊 Marché',qualify_prospect_bant:'🎯 BANT',
+    generate_outreach_email:'✉️ Email',generate_linkedin_message:'💼 LinkedIn',
+    prepare_meeting_script:'📅 Script RDV',search_knowledge_base:'🔍 Base',
+    check_order_status:'📦 Commande',create_support_ticket:'🎫 Ticket',
+    process_refund_request:'💳 Remboursement',generate_report:'📄 Rapport',
+    analyze_data:'📊 Données',create_content:'✍️ Contenu',generate_campaign:'📣 Campagne'};
+  return m[n]||n;
+}
+function logout(){localStorage.clear();location.href='/login';}
+
+/* ── PROFILE ── */
+window._profileData={};
+window._tags={services:[],targets:[],promo:[],rules:[]};
 
 async function loadProfile() {
   try {
-    const r = await fetch('/profile', {headers:{'Authorization':`Bearer ${token}`}});
-    if (!r.ok) return;
-    const {profile} = await r.json();
-    if (!profile) return;
-    fillProfile(profile); updateProfileStatus(true);
-  } catch {}
+    const r=await apiFetch('/profile');
+    if(r.profile){ window._profileData=r.profile; populateProfileForm(r.profile); updateProfileBadge(r.profile.company_name); }
+  } catch(e){}
 }
-
-function fillProfile(p) {
-  if (!p) return;
-  const s = (id, v) => { const el = document.getElementById(id); if(el&&v!==null&&v!==undefined) el.value=v; };
-  s('pCompany', p.company_name); s('pWebsite', p.website); s('pSector', p.sector);
-  s('pDesc', p.description); s('pFaq', p.faq);
-  s('pServices',  Array.isArray(p.services)      ? p.services.join('\n')      : p.services || '');
-  s('pTargets',   Array.isArray(p.target_clients) ? p.target_clients.join('\n') : p.target_clients || '');
-  s('pRules',     Array.isArray(p.rules)          ? p.rules.join('\n')          : p.rules || '');
-  s('pCodes',     Array.isArray(p.promo_codes)    ? p.promo_codes.join('\n')    : p.promo_codes || '');
-  if (p.tone) document.getElementById('pTone').value = p.tone;
+function populateProfileForm(p) {
+  document.getElementById('pName').value   =p.company_name||'';
+  document.getElementById('pWebsite').value=p.website||'';
+  document.getElementById('pSector').value =p.sector||'';
+  document.getElementById('pDesc').value   =p.description||'';
+  document.getElementById('pTone').value   =p.tone||'professionnel';
+  document.getElementById('pFaq').value    =p.faq||'';
+  document.getElementById('pDocs').value   =p.extra_docs||'';
+  window._tags.services=p.services||[];
+  window._tags.targets =p.target_clients||[];
+  window._tags.promo   =p.promo_codes||[];
+  window._tags.rules   =p.rules||[];
+  renderTags();
 }
-
+function updateProfileBadge(name) {
+  const b=document.getElementById('profileBadge');
+  if(name){b.className='profile-badge done';b.textContent='✓ Profil';}
+  else    {b.className='profile-badge todo';b.textContent='⚙ Profil';}
+}
 async function saveProfile() {
-  const split = id => document.getElementById(id).value.split('\n').map(s=>s.trim()).filter(Boolean);
-  const payload = {
-    company_name:   document.getElementById('pCompany').value.trim(),
-    website:        document.getElementById('pWebsite').value.trim(),
-    sector:         document.getElementById('pSector').value.trim(),
-    description:    document.getElementById('pDesc').value.trim(),
-    tone:           document.getElementById('pTone').value,
-    faq:            document.getElementById('pFaq').value.trim(),
-    services:       split('pServices'),
-    target_clients: split('pTargets'),
-    rules:          split('pRules'),
-    promo_codes:    split('pCodes'),
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true; btn.textContent='⏳ Enregistrement…';
+  const data={
+    company_name:document.getElementById('pName').value.trim(),
+    website:document.getElementById('pWebsite').value.trim(),
+    sector:document.getElementById('pSector').value,
+    description:document.getElementById('pDesc').value.trim(),
+    tone:document.getElementById('pTone').value,
+    faq:document.getElementById('pFaq').value.trim(),
+    extra_docs:document.getElementById('pDocs').value.trim(),
+    services:window._tags.services, target_clients:window._tags.targets,
+    promo_codes:window._tags.promo, rules:window._tags.rules,
   };
   try {
-    const r = await fetch('/profile', {
-      method:'PUT', headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
-      body: JSON.stringify(payload),
+    const r=await apiFetch('/profile',{method:'PUT',body:JSON.stringify(data)});
+    window._profileData=r.profile; updateProfileBadge(data.company_name);
+    if(currentAgent) setTimeout(()=>connectWS(currentAgent),400);
+    btn.textContent='✅ Enregistré !';
+    setTimeout(()=>{ btn.disabled=false; btn.textContent='💾 Enregistrer le profil'; closeAllPanels(); },1200);
+  } catch(e){
+    btn.disabled=false; btn.textContent='❌ Erreur — Réessayer';
+    setTimeout(()=>btn.textContent='💾 Enregistrer le profil',2000);
+  }
+}
+function focusTagInput(el){el.querySelector('input')?.focus();}
+const TAG_EL={services:'servicesInput',targets:'targetsInput',promo:'promoInput',rules:'rulesInput'};
+function renderTags(){Object.keys(TAG_EL).forEach(k=>renderTagGroup(k,TAG_EL[k]));}
+function renderTagGroup(key,elId) {
+  const c=document.getElementById(elId),inp=c.querySelector('input');
+  c.querySelectorAll('.tag').forEach(t=>t.remove());
+  window._tags[key].forEach((v,i)=>{
+    const t=document.createElement('div'); t.className='tag';
+    t.innerHTML=`${v}<span class="tag-del" onclick="removeTag('${key}',${i})">×</span>`;
+    c.insertBefore(t,inp);
+  });
+}
+function addTag(e,key) {
+  if(e.key!=='Enter'&&e.key!==',') return; e.preventDefault();
+  const v=e.target.value.trim();
+  if(v&&!window._tags[key].includes(v)){window._tags[key].push(v);renderTagGroup(key,TAG_EL[key]);}
+  e.target.value='';
+}
+function removeTag(key,i){window._tags[key].splice(i,1);renderTagGroup(key,TAG_EL[key]);}
+function openProfile(){openPanel('profilePanel');}
+
+/* ── STATS ── */
+async function loadMiniStats() {
+  try {
+    const r=await apiFetch('/stats');
+    document.getElementById('sc-total').textContent=r.total_messages;
+    document.getElementById('sc-today').textContent=r.messages_today;
+    document.getElementById('sc-conv').textContent =r.total_conversations;
+    document.getElementById('statsBar').style.display='flex';
+  } catch(e){}
+}
+async function openStats() {
+  openPanel('statsPanel');
+  const body=document.getElementById('statsBody');
+  body.innerHTML='<div style="color:var(--text3);text-align:center;padding:40px">Chargement…</div>';
+  try {
+    const r=await apiFetch('/stats');
+    const max=Math.max(1,...r.by_agent.map(a=>a.count));
+    body.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+        <div class="stat-big"><div class="stat-big-icon">💬</div><div><div class="stat-big-num">${r.total_messages}</div><div class="stat-big-label">Messages total</div></div></div>
+        <div class="stat-big"><div class="stat-big-icon">📅</div><div><div class="stat-big-num">${r.messages_today}</div><div class="stat-big-label">Aujourd'hui</div></div></div>
+        <div class="stat-big"><div class="stat-big-icon">🗂️</div><div><div class="stat-big-num">${r.total_conversations}</div><div class="stat-big-label">Conversations</div></div></div>
+        <div class="stat-big"><div class="stat-big-icon">🤖</div><div><div class="stat-big-num">${r.by_agent.length}</div><div class="stat-big-label">Agents utilisés</div></div></div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px">Par agent</div>
+      ${r.by_agent.length?r.by_agent.map(a=>`
+        <div class="agent-bar">
+          <div class="agent-bar-name">${a.name}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(a.count/max*100)}%"></div></div>
+          <div class="agent-bar-count">${a.count}</div>
+        </div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">Aucune activité encore</div>'}`;
+  } catch(e){body.innerHTML='<div style="color:var(--red);text-align:center;padding:40px">Erreur de chargement</div>';}
+}
+
+/* ── HISTORY ── */
+async function loadRecentConversations() {
+  try {
+    const r=await apiFetch('/conversations?limit=8');
+    const list=document.getElementById('recentList'),sec=document.getElementById('recentSection');
+    list.innerHTML='';
+    if(!r.conversations.length){sec.style.display='none';return;}
+    sec.style.display='block';
+    r.conversations.slice(0,5).forEach(c=>{
+      const item=document.createElement('div'); item.className='history-item';
+      item.innerHTML=`<span class="history-agent">${agentIcon(c.agent_type)}</span><span class="history-title">${c.title||'Conversation'}</span><button class="history-del" onclick="delConv('${c.id}',event)">×</button>`;
+      item.onclick=e=>{ if(!e.target.classList.contains('history-del')) openConvDetail(c.id); };
+      list.appendChild(item);
     });
-    if (!r.ok) throw new Error();
-    document.getElementById('panelSuccess').style.display = 'block';
-    updateProfileStatus(true);
-    setTimeout(()=>{ document.getElementById('panelSuccess').style.display='none'; closeProfile(); reconnectIfActive(); }, 2000);
-  } catch { alert('Erreur lors de la sauvegarde'); }
+  } catch(e){}
+}
+async function openHist() {
+  openPanel('histPanel');
+  const body=document.getElementById('histBody');
+  body.innerHTML='<div style="color:var(--text3);text-align:center;padding:40px">Chargement…</div>';
+  try {
+    const r=await apiFetch('/conversations?limit=50');
+    if(!r.conversations.length){body.innerHTML='<div style="color:var(--text3);text-align:center;padding:40px">Aucune conversation encore</div>';return;}
+    body.innerHTML=r.conversations.map(c=>`
+      <div class="hist-item" onclick="openConvDetail('${c.id}')">
+        <div class="hist-item-top">
+          <span class="hist-icon">${agentIcon(c.agent_type)}</span>
+          <span class="hist-title">${c.title||'Conversation'}</span>
+          <button class="hist-del-btn" onclick="delConv('${c.id}',event)">Suppr.</button>
+        </div>
+        <div class="hist-preview">${c.agent_type} · ${c.msg_count} messages</div>
+        <div class="hist-meta">${fmtDate(c.updated_at)}</div>
+      </div>`).join('');
+  } catch(e){body.innerHTML='<div style="color:var(--red);text-align:center;padding:40px">Erreur</div>';}
+}
+async function openConvDetail(id) {
+  closeAllPanels();
+  try {
+    const r=await apiFetch(`/conversations/${id}`);
+    selectAgent(r.conversation.agent_type);
+    setTimeout(()=>{
+      hideWelcome();
+      const msgs=document.getElementById('messages'); msgs.innerHTML='';
+      r.messages.forEach(m=>{
+        if(m.role==='user') appendUserMsg(m.content);
+        else { const el=createMsgEl('assistant'); el.querySelector('.msg-bubble').innerHTML=marked.parse(m.content); msgs.appendChild(el); }
+      });
+      scrollBottom();
+    },400);
+  } catch(e){}
+}
+async function delConv(id,e) {
+  e.stopPropagation();
+  try {
+    await apiFetch(`/conversations/${id}`,{method:'DELETE'});
+    loadRecentConversations();
+    if(document.getElementById('histPanel').classList.contains('open')) openHist();
+  } catch(e){}
+}
+function agentIcon(t){return{support:'🎧',sales:'📈',automation:'⚙️',content:'✍️'}[t]||'🤖';}
+function fmtDate(iso){
+  const d=new Date(iso),now=new Date(),diff=(now-d)/1000;
+  if(diff<60) return 'À l\'instant';
+  if(diff<3600) return `Il y a ${Math.floor(diff/60)} min`;
+  if(diff<86400) return `Il y a ${Math.floor(diff/3600)} h`;
+  return d.toLocaleDateString('fr-FR');
 }
 
-function updateProfileStatus(complete) {
-  const bar = document.getElementById('profileStatusBar');
-  bar.className = complete ? 'profile-status complete' : 'profile-status';
-  bar.innerHTML = complete ? '✅ Profil entreprise configuré' : '⚠️ Complétez votre profil pour personnaliser vos agents';
+/* ── PANELS ── */
+function openPanel(id){document.getElementById('overlay').classList.add('open');document.getElementById(id).classList.add('open');}
+function closeAllPanels(){
+  document.getElementById('overlay').classList.remove('open');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));
+  document.getElementById('sidebar').classList.remove('mobile-open');
 }
 
-function reconnectIfActive() {
-  if (currentAgent) { clearChat(); showWelcome(currentAgent); connectWS(currentAgent.type); }
+/* ── ONBOARDING ── */
+function showOnboarding(){document.getElementById('onboardOverlay').style.display='flex';}
+function closeOnboarding(skip){
+  localStorage.setItem('onboarding_seen','1');
+  document.getElementById('onboardOverlay').style.display='none';
+  if(!skip) openProfile();
 }
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
-function clearChat() { document.getElementById('chatArea').innerHTML=''; streamMsgEl=streamBubbleEl=streamBadgesEl=null; streamRaw=''; }
-function enableInput()  { isBusy=false; const i=document.getElementById('msgInput'),b=document.getElementById('sendBtn'); i.disabled=false;b.disabled=false;i.focus(); }
-function disableInput() { isBusy=true; document.getElementById('msgInput').disabled=true; document.getElementById('sendBtn').disabled=true; }
-function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,130)+'px'; }
-function now() { return new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
-function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
-async function copyTxt(btn, text) { try { await navigator.clipboard.writeText(text); btn.textContent='✓';setTimeout(()=>btn.textContent='Copier',1500); } catch{} }
-function exportChat() {
-  if (!chatHistory.length) return;
-  const lines = [`Conversation — ${currentAgent?.name}`, new Date().toLocaleString('fr-FR'), '─'.repeat(60), ''];
-  chatHistory.forEach(m => { lines.push(`[${m.time}] ${m.role==='user'?'Vous':currentAgent?.name||'Agent'}:`); lines.push(m.text); lines.push(''); });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'}));
-  a.download = `conv-${currentAgent?.type}-${Date.now()}.txt`; a.click();
+/* ── API ── */
+async function apiFetch(path,opts={}){
+  const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,...(opts.headers||{})}});
+  if(r.status===401){localStorage.clear();location.href='/login';}
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
 }
-function logout() { localStorage.clear(); location.href='/login'; }
 </script>
 </body>
 </html>

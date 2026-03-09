@@ -6,7 +6,7 @@ from typing import Optional
 import bcrypt
 from sqlalchemy.orm import Session
 
-from database.models import CompanyProfile, DemoSession, Tenant, User
+from database.models import CompanyProfile, Conversation, DemoSession, Message, Tenant, User
 
 
 # ── Password (bcrypt direct — compatible with all versions) ───────────────────
@@ -97,3 +97,79 @@ def get_demo_session(db: Session, session_id: str) -> Optional[DemoSession]:
     if s and s.expires_at < datetime.utcnow():
         return None
     return s
+
+
+# ── Conversations ──────────────────────────────────────────────────────────────
+
+def create_conversation(db: Session, *, user_id: str, tenant_id: str,
+                        agent_type: str, title: str = "") -> Conversation:
+    c = Conversation(user_id=user_id, tenant_id=tenant_id,
+                     agent_type=agent_type, title=title)
+    db.add(c); db.commit(); db.refresh(c)
+    return c
+
+def update_conversation_title(db: Session, conversation_id: str, title: str) -> None:
+    c = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if c and not c.title:
+        c.title = title[:120]
+        db.commit()
+
+def add_message(db: Session, *, conversation_id: str, role: str, content: str) -> Message:
+    m = Message(conversation_id=conversation_id, role=role, content=content)
+    db.add(m)
+    # bump conversation updated_at + msg_count
+    c = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if c:
+        c.updated_at = datetime.utcnow()
+        c.msg_count  = (c.msg_count or 0) + 1
+    db.commit()
+    return m
+
+def get_conversations(db: Session, tenant_id: str, limit: int = 30):
+    return (db.query(Conversation)
+              .filter(Conversation.tenant_id == tenant_id)
+              .order_by(Conversation.updated_at.desc())
+              .limit(limit).all())
+
+def get_conversation(db: Session, conversation_id: str,
+                     tenant_id: str) -> Optional[Conversation]:
+    return (db.query(Conversation)
+              .filter(Conversation.id == conversation_id,
+                      Conversation.tenant_id == tenant_id)
+              .first())
+
+def delete_conversation(db: Session, conversation_id: str, tenant_id: str) -> bool:
+    c = get_conversation(db, conversation_id, tenant_id)
+    if not c:
+        return False
+    db.delete(c); db.commit()
+    return True
+
+
+# ── Stats ─────────────────────────────────────────────────────────────────────
+
+def get_tenant_stats(db: Session, tenant_id: str) -> dict:
+    from sqlalchemy import func
+    total_conv = db.query(func.count(Conversation.id))\
+                   .filter(Conversation.tenant_id == tenant_id).scalar() or 0
+    total_msg  = db.query(func.count(Message.id))\
+                   .join(Conversation)\
+                   .filter(Conversation.tenant_id == tenant_id).scalar() or 0
+    # per-agent counts
+    agent_rows = (db.query(Conversation.agent_type, func.count(Conversation.id))
+                    .filter(Conversation.tenant_id == tenant_id)
+                    .group_by(Conversation.agent_type).all())
+    by_agent = {row[0]: row[1] for row in agent_rows}
+    # today
+    from datetime import date
+    today_start = datetime.combine(date.today(), datetime.min.time())
+    today_msg = db.query(func.count(Message.id))\
+                  .join(Conversation)\
+                  .filter(Conversation.tenant_id == tenant_id,
+                          Message.created_at >= today_start).scalar() or 0
+    return {
+        "total_conversations": total_conv,
+        "total_messages":      total_msg,
+        "messages_today":      today_msg,
+        "by_agent":            by_agent,
+    }
