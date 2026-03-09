@@ -112,7 +112,7 @@ def _tenant_out(tenant) -> dict:
 
 @router.post("/register")
 @limiter.limit("5/minute")
-def register(request: Request, req: RegisterIn, response: Response, db: Session = Depends(get_db)):
+async def register(request: Request, req: RegisterIn, response: Response, db: Session = Depends(get_db)):
     if get_user_by_email(db, req.email):
         raise HTTPException(400, "Email déjà utilisé")
 
