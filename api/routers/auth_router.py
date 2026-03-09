@@ -1,10 +1,11 @@
 """Register / Login / Me / Logout endpoints."""
 import re
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from api.auth import clear_auth_cookie, create_token, get_current_user, set_auth_cookie
+from api.limiter import limiter
 from database.crud import authenticate, create_tenant, create_user, get_tenant_by_slug, get_user_by_email
 from database.database import get_db
 from database.models import User
@@ -55,7 +56,8 @@ def _tenant_out(tenant) -> dict:
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/register")
-def register(req: RegisterIn, response: Response, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def register(request: Request, req: RegisterIn, response: Response, db: Session = Depends(get_db)):
     if get_user_by_email(db, req.email):
         raise HTTPException(400, "Email déjà utilisé")
 
@@ -75,7 +77,8 @@ def register(req: RegisterIn, response: Response, db: Session = Depends(get_db))
 
 
 @router.post("/login")
-def login(req: LoginIn, response: Response, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, req: LoginIn, response: Response, db: Session = Depends(get_db)):
     user = authenticate(db, req.email, req.password)
     if not user:
         raise HTTPException(401, "Email ou mot de passe incorrect")

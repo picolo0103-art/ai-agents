@@ -2,14 +2,16 @@
 import json
 import os
 import sys
-import uuid
 from contextlib import asynccontextmanager
 from typing import Dict
 
-from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
+from api.limiter import limiter
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -33,9 +35,9 @@ AGENT_TYPES = {
     "content":    ContentAgent,
 }
 
-_sessions: Dict[str, object] = {}
-
 FRONTEND = os.path.join(os.path.dirname(__file__), "..", "frontend")
+
+# limiter is imported from api.limiter
 
 
 # ── App lifecycle ──────────────────────────────────────────────────────────────
@@ -49,12 +51,19 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS — origins from env var (comma-separated) or wildcard in dev.
+# allow_credentials=True requires explicit origins, not "*".
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
+_origins = [o.strip() for o in _raw_origins.split(",")] if _raw_origins else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins,
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_credentials=True,
+    allow_credentials=("*" not in _origins),
 )
 
 # ── Routers ────────────────────────────────────────────────────────────────────
@@ -182,4 +191,4 @@ async def websocket_chat(
                 await websocket.send_json({"type": "error", "message": str(exc)})
 
     except WebSocketDisconnect:
-        _sessions.pop(conversation.id, None)
+        pass

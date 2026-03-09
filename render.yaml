@@ -29,6 +29,12 @@ services:
           name: agentai-db
           property: connectionString
 
+      # CORS — set to your real Render URL once deployed, e.g.:
+      # https://agentai-api.onrender.com
+      # Leave empty to allow all origins (dev/testing only)
+      - key: ALLOWED_ORIGINS
+        sync: false
+
       - key: APP_NAME
         value: AgentAI Platform
       - key: APP_VERSION

@@ -23,9 +23,10 @@ class Tenant(Base):
     is_active  = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    users        = relationship("User",           back_populates="tenant", cascade="all, delete-orphan")
-    profile      = relationship("CompanyProfile", back_populates="tenant", uselist=False, cascade="all, delete-orphan")
-    demo_sessions = relationship("DemoSession",  back_populates="tenant", cascade="all, delete-orphan")
+    users          = relationship("User",           back_populates="tenant", cascade="all, delete-orphan")
+    profile        = relationship("CompanyProfile", back_populates="tenant", uselist=False, cascade="all, delete-orphan")
+    demo_sessions  = relationship("DemoSession",    back_populates="tenant", cascade="all, delete-orphan")
+    conversations  = relationship("Conversation",   back_populates="tenant", cascade="all, delete-orphan")
 
 
 class User(Base):
@@ -40,7 +41,8 @@ class User(Base):
     is_admin        = Column(Boolean, default=True)
     created_at      = Column(DateTime, default=datetime.utcnow)
 
-    tenant = relationship("Tenant", back_populates="users")
+    tenant        = relationship("Tenant", back_populates="users")
+    conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
 
 
 class CompanyProfile(Base):
@@ -165,8 +167,8 @@ class Conversation(Base):
 
     messages = relationship("Message", back_populates="conversation",
                             cascade="all, delete-orphan", order_by="Message.created_at")
-    user   = relationship("User")
-    tenant = relationship("Tenant")
+    user   = relationship("User",   back_populates="conversations")
+    tenant = relationship("Tenant", back_populates="conversations")
 
 
 class Message(Base):
