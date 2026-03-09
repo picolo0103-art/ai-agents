@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+
+  # ── API (FastAPI) ──────────────────────────────────────────
+  api:
+    build: .
+    container_name: agentai-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # ⚠️ Copy .env.example to .env and fill in your values
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - SECRET_KEY=${SECRET_KEY:-changeme-replace-in-production}
+      - DATABASE_URL=postgresql://agentai:${POSTGRES_PASSWORD:-secret}@db:5432/agentai
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data          # SQLite fallback (dev only)
+    networks:
+      - agentai-net
+
+  # ── PostgreSQL ─────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: agentai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: agentai
+      POSTGRES_USER: agentai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"       # remove this line in production
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentai -d agentai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agentai-net
+
+  # ── pgAdmin (optional, dev only) ──────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: agentai-pgadmin
+    restart: unless-stopped
+    profiles: ["dev"]        # only starts with: docker compose --profile dev up
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@agentai.local
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - agentai-net
+
+volumes:
+  postgres_data:
+
+networks:
+  agentai-net:
+    driver: bridge

@@ -1,0 +1,33 @@
+{
+  "id": "demo-boutique",
+  "company": "Boutique Mode Paris",
+  "sector": "E-commerce mode et accessoires",
+  "language": "fr",
+  "tone": "élégant, chaleureux, vouvoiement",
+  "products": ["robes", "manteaux", "vestes", "accessoires", "chaussures"],
+  "price_range": "50€ - 500€",
+  "policies": {
+    "returns": "30 jours après réception, remboursement sous 5 jours ouvrés",
+    "delivery": "Livraison gratuite dès 80€, sinon 4.90€. Délai : 3-5 jours ouvrés",
+    "payment": "Carte bancaire, PayPal, virement bancaire",
+    "warranty": "Garantie satisfait ou remboursé 14 jours"
+  },
+  "faq": [
+    "Les retours sont gratuits pour les commandes supérieures à 80€",
+    "Les articles soldés ne sont pas remboursables, uniquement échangeables",
+    "La livraison express (24h) est disponible pour 12.90€",
+    "Les tailles vont du XS au XXL, le guide des tailles est disponible sur chaque fiche produit"
+  ],
+  "rules": [
+    "Toujours proposer le code promo BIENVENUE10 aux nouveaux clients",
+    "Ne jamais promettre un remboursement sur les articles soldés",
+    "Si le client est mécontent, proposer un bon d'achat de 15€ avant d'escalader",
+    "Les réclamations sont à traiter sous 24h maximum"
+  ],
+  "promo_codes": ["BIENVENUE10 (-10% première commande)", "ETE2026 (-20% sur les robes d'été)"],
+  "contact": {
+    "email": "contact@boutique-mode-paris.fr",
+    "phone": "01 23 45 67 89",
+    "hours": "Lundi-Vendredi 9h-18h"
+  }
+}

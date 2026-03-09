@@ -1,0 +1,47 @@
+##############################################################
+# Render Blueprint — AgentAI Platform
+# Docs: https://render.com/docs/blueprint-spec
+##############################################################
+
+services:
+
+  # ── Web Service (FastAPI via Docker) ───────────────────────
+  - type: web
+    name: agentai-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: frankfurt          # europe — change to oregon / singapore as needed
+    plan: free                 # upgrade to starter for always-on
+    healthCheckPath: /health
+
+    envVars:
+      # Set this manually in Render dashboard → Environment
+      - key: GROQ_API_KEY
+        sync: false
+
+      # Auto-generated secure random secret for JWT
+      - key: SECRET_KEY
+        generateValue: true
+
+      # Injected automatically from the DB below
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agentai-db
+          property: connectionString
+
+      - key: APP_NAME
+        value: AgentAI Platform
+      - key: APP_VERSION
+        value: "2.0.0"
+      - key: DEBUG
+        value: "false"
+
+    autoDeploy: true
+
+# ── PostgreSQL (free tier — 256 MB) ──────────────────────────
+databases:
+  - name: agentai-db
+    databaseName: agentai
+    user: agentai
+    plan: free
+    region: frankfurt

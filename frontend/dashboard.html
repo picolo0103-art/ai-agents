@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentAI — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242736;--border:#2e3147;--accent:#6366f1;--accent2:#818cf8;--green:#10b981;--yellow:#f59e0b;--red:#ef4444;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--radius:12px}
+    html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text)}
+    .app{display:grid;grid-template-columns:260px 1fr;height:100vh;overflow:hidden}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+    /* ── Sidebar ── */
+    .sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+    .sidebar-header{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+    .logo{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+    .logo-icon{width:30px;height:30px;background:var(--accent);border-radius:8px;display:grid;place-items:center;font-size:15px}
+    .logo-name{font-size:14px;font-weight:700}
+    .tenant-name{font-size:11px;color:var(--text3);margin-top:2px;padding-left:40px}
+    .nav{flex:1;overflow-y:auto;padding:8px}
+    .nav-section{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);padding:10px 10px 6px}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;margin-bottom:2px;border:1px solid transparent}
+    .nav-item:hover{background:var(--surface2);color:var(--text)}
+    .nav-item.active{background:var(--surface2);border-color:var(--accent);color:var(--text)}
+    .nav-item .ni-icon{font-size:16px;width:20px;text-align:center}
+    .nav-item .ni-badge{margin-left:auto;font-size:9px;background:var(--accent);color:#fff;padding:2px 6px;border-radius:20px;font-weight:700}
+    .profile-status{margin:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--yellow);cursor:pointer;transition:all .15s}
+    .profile-status:hover{background:rgba(245,158,11,.15)}
+    .profile-status.complete{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--green)}
+    .sidebar-footer{padding:12px;border-top:1px solid var(--border)}
+    .user-card{display:flex;align-items:center;gap:10px}
+    .user-avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);display:grid;place-items:center;font-size:13px;font-weight:600;flex-shrink:0}
+    .user-info{flex:1;min-width:0}
+    .user-email{font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .user-role{font-size:10px;color:var(--text3)}
+    .logout-btn{width:24px;height:24px;border:none;background:none;cursor:pointer;color:var(--text3);font-size:14px;display:grid;place-items:center;border-radius:6px;transition:all .15s}
+    .logout-btn:hover{background:var(--surface2);color:var(--red)}
+
+    /* ── Main ── */
+    .main{display:flex;flex-direction:column;overflow:hidden;height:100vh}
+    .main-header{padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;min-height:60px}
+    .agent-info{display:flex;align-items:center;gap:12px}
+    .agent-icon-big{font-size:22px}
+    .agent-title{font-size:15px;font-weight:600}
+    .agent-caps{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
+    .chip{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(99,102,241,.12);color:var(--accent2);border:1px solid rgba(99,102,241,.25)}
+    .header-btns{display:flex;gap:8px}
+    .btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:12px;font-family:inherit;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+    .btn:hover{border-color:var(--accent2);color:var(--text)}
+    .btn-accent{background:var(--accent);border-color:var(--accent);color:#fff}
+    .btn-accent:hover{background:var(--accent2);border-color:var(--accent2)}
+
+    /* ── Chat ── */
+    .chat-area{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+    .welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;gap:16px}
+    .welcome-icon{font-size:52px}
+    .welcome-title{font-size:20px;font-weight:700}
+    .welcome-sub{font-size:13px;color:var(--text2);max-width:360px;line-height:1.65}
+    .suggestion-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;width:100%;max-width:500px;margin-top:8px}
+    .suggestion{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;cursor:pointer;text-align:left;font-size:12px;color:var(--text2);line-height:1.5;transition:all .15s}
+    .suggestion:hover{border-color:var(--accent);color:var(--text)}
+    .suggestion strong{display:block;font-size:12px;color:var(--text);margin-bottom:2px}
+    .message{display:flex;gap:10px;max-width:820px}
+    .message.user{align-self:flex-end;flex-direction:row-reverse}
+    .message.user .bubble{background:var(--accent);color:#fff;border-radius:18px 4px 18px 18px}
+    .message.agent .bubble{background:var(--surface2);border:1px solid var(--border);border-radius:4px 18px 18px 18px}
+    .avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;flex-shrink:0;background:var(--surface2);border:1px solid var(--border)}
+    .msg-body{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .bubble{padding:11px 14px;font-size:13.5px;line-height:1.7;max-width:640px;word-break:break-word}
+    .bubble p{margin-bottom:8px}.bubble p:last-child{margin-bottom:0}
+    .bubble ul,.bubble ol{margin:6px 0 6px 18px}.bubble li{margin-bottom:3px}
+    .bubble h2,.bubble h3{font-size:14px;font-weight:600;margin:10px 0 5px}
+    .bubble pre{background:rgba(0,0,0,.3);border-radius:6px;padding:10px;margin:6px 0;overflow-x:auto}
+    .bubble pre code{background:none;padding:0;font-size:12px}
+    .bubble code{font-family:monospace;font-size:12px;background:rgba(0,0,0,.25);padding:1px 5px;border-radius:3px}
+    .bubble blockquote{border-left:3px solid var(--accent);padding-left:10px;color:var(--text2);margin:6px 0}
+    .bubble table{border-collapse:collapse;width:100%;margin:6px 0;font-size:12px}
+    .bubble th,.bubble td{border:1px solid var(--border);padding:5px 9px;text-align:left}
+    .bubble th{background:rgba(99,102,241,.1);font-weight:600}
+    .cursor{display:inline-block;width:2px;height:13px;background:var(--accent2);margin-left:2px;vertical-align:middle;animation:blink .8s steps(2) infinite}
+    @keyframes blink{0%{opacity:1}50%{opacity:0}}
+    .msg-meta{display:flex;align-items:center;gap:8px}
+    .timestamp{font-size:10px;color:var(--text3)}
+    .copy-btn{font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;font-family:inherit}
+    .copy-btn:hover{background:var(--surface2);color:var(--text2)}
+    .tool-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}
+    .tool-badge{font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid var(--border);display:flex;align-items:center;gap:4px}
+    .tool-badge.running{background:rgba(245,158,11,.1);border-color:var(--yellow);color:var(--yellow);animation:pulse 1.5s ease-in-out infinite}
+    .tool-badge.done{background:rgba(16,185,129,.1);border-color:var(--green);color:var(--green)}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+    /* ── Input bar ── */
+    .input-bar{padding:14px 20px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0}
+    .input-wrapper{display:flex;gap:10px;align-items:flex-end;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;transition:border-color .15s}
+    .input-wrapper:focus-within{border-color:var(--accent)}
+    textarea{flex:1;background:none;border:none;outline:none;resize:none;color:var(--text);font-family:inherit;font-size:14px;line-height:1.5;max-height:130px;min-height:22px}
+    textarea::placeholder{color:var(--text3)}
+    .send-btn{width:34px;height:34px;border-radius:9px;background:var(--accent);border:none;cursor:pointer;display:grid;place-items:center;flex-shrink:0;color:#fff;font-size:15px;transition:background .15s}
+    .send-btn:hover{background:var(--accent2)}
+    .send-btn:disabled{opacity:.4;cursor:not-allowed}
+    .input-hint{font-size:11px;color:var(--text3);margin-top:7px;text-align:center}
+
+    /* ── Profile Panel (slide-in) ── */
+    .profile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:flex-start;justify-content:flex-end}
+    .profile-overlay.open{display:flex}
+    .profile-panel{width:520px;height:100vh;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:28px;animation:slideIn .25s ease}
+    @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+    .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+    .panel-title{font-size:18px;font-weight:700}
+    .panel-close{width:32px;height:32px;border:none;background:var(--surface2);border-radius:8px;cursor:pointer;color:var(--text2);font-size:18px;display:grid;place-items:center}
+    .panel-close:hover{color:var(--text)}
+    .field-group{margin-bottom:20px}
+    .field-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:7px}
+    .field-group input,.field-group textarea,.field-group select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .15s;resize:vertical}
+    .field-group input:focus,.field-group textarea:focus,.field-group select:focus{border-color:var(--accent)}
+    .field-group textarea{min-height:80px}
+    .field-group small{font-size:11px;color:var(--text3);margin-top:4px;display:block}
+    .save-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+    .save-btn:hover{background:var(--accent2)}
+    .panel-success{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;padding:10px;border-radius:8px;font-size:13px;text-align:center;margin-top:12px;display:none}
+
+    /* No agent selected */
+    .no-agent-msg{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;flex-direction:column;gap:12px;text-align:center}
+  </style>
+</head>
+<body>
+
+<!-- Profile Panel -->
+<div class="profile-overlay" id="profileOverlay" onclick="closeProfileIfOutside(event)">
+  <div class="profile-panel" id="profilePanel">
+    <div class="panel-header">
+      <div class="panel-title">🏢 Profil entreprise</div>
+      <button class="panel-close" onclick="closeProfile()">✕</button>
+    </div>
+    <div class="field-group">
+      <label>Nom de l'entreprise *</label>
+      <input type="text" id="pCompany" placeholder="Mon Entreprise SAS" />
+    </div>
+    <div class="field-group">
+      <label>Site web</label>
+      <input type="url" id="pWebsite" placeholder="https://monentreprise.fr" />
+    </div>
+    <div class="field-group">
+      <label>Secteur d'activité</label>
+      <input type="text" id="pSector" placeholder="E-commerce, SaaS, Immobilier…" />
+    </div>
+    <div class="field-group">
+      <label>Description</label>
+      <textarea id="pDesc" placeholder="Ce que fait votre entreprise en 2-3 phrases…"></textarea>
+    </div>
+    <div class="field-group">
+      <label>Services / Produits</label>
+      <textarea id="pServices" placeholder="Un service par ligne :&#10;Développement web&#10;Conseil SEO&#10;Formation en ligne"></textarea>
+      <small>Un service par ligne</small>
+    </div>
+    <div class="field-group">
+      <label>Clients cibles</label>
+      <textarea id="pTargets" placeholder="Un profil par ligne :&#10;PME e-commerce&#10;Startups SaaS&#10;Artisans"></textarea>
+      <small>Un profil par ligne</small>
+    </div>
+    <div class="field-group">
+      <label>Ton de communication</label>
+      <select id="pTone">
+        <option value="professionnel">Professionnel</option>
+        <option value="chaleureux et professionnel">Chaleureux & Professionnel</option>
+        <option value="expert technique">Expert technique</option>
+        <option value="décontracté">Décontracté</option>
+        <option value="formel">Formel</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label>FAQ & Informations clés</label>
+      <textarea id="pFaq" style="min-height:100px" placeholder="Politique retour : 30 jours&#10;Livraison gratuite dès 80€&#10;Support disponible 9h-18h du lundi au vendredi"></textarea>
+      <small>Ces informations seront utilisées par l'agent Support</small>
+    </div>
+    <div class="field-group">
+      <label>Règles importantes</label>
+      <textarea id="pRules" placeholder="Une règle par ligne :&#10;Ne jamais promettre un remboursement sur les articles soldés&#10;Proposer le code BIENVENUE10 aux nouveaux clients"></textarea>
+      <small>Une règle par ligne — l'agent les respectera impérativement</small>
+    </div>
+    <div class="field-group">
+      <label>Codes promo actifs</label>
+      <textarea id="pCodes" style="min-height:60px" placeholder="Un code par ligne :&#10;BIENVENUE10 (-10% première commande)&#10;ETE2026 (-20% robes d'été)"></textarea>
+    </div>
+    <button class="save-btn" onclick="saveProfile()">💾 Enregistrer le profil</button>
+    <div class="panel-success" id="panelSuccess">✓ Profil enregistré — les agents utilisent maintenant vos données</div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">🤖</div>
+        <div class="logo-name">AgentAI Platform</div>
+      </div>
+      <div class="tenant-name" id="tenantName">Chargement…</div>
+    </div>
+
+    <div id="profileStatusBar" class="profile-status" onclick="openProfile()">
+      ⚠️ Complétez votre profil pour personnaliser vos agents
+    </div>
+
+    <div class="nav">
+      <div class="nav-section">Agents IA</div>
+      <div id="navAgents"></div>
+
+      <div class="nav-section" style="margin-top:8px">Compte</div>
+      <div class="nav-item" onclick="openProfile()">
+        <span class="ni-icon">🏢</span> Profil entreprise
+      </div>
+      <div class="nav-item" onclick="exportChat()">
+        <span class="ni-icon">⬇️</span> Exporter conversation
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <div class="user-info">
+          <div class="user-email" id="userEmail">—</div>
+          <div class="user-role">Administrateur</div>
+        </div>
+        <button class="logout-btn" onclick="logout()" title="Se déconnecter">⏻</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="main-header">
+      <div class="agent-info" id="agentInfo">
+        <div class="no-agent-msg" style="font-size:13px;color:var(--text3)">Sélectionnez un agent</div>
+      </div>
+      <div class="header-btns">
+        <button class="btn" id="resetBtn" style="display:none" onclick="resetConversation()">🔄 Réinitialiser</button>
+        <button class="btn" id="exportBtn" style="display:none" onclick="exportChat()">⬇ Exporter</button>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+      <div class="welcome" id="welcomeScreen">
+        <div class="welcome-icon">🤖</div>
+        <div class="welcome-title">Votre espace IA personnalisé</div>
+        <div class="welcome-sub">Sélectionnez un agent et complétez votre profil entreprise pour des réponses 100% adaptées à votre activité.</div>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <div class="input-wrapper">
+        <textarea id="msgInput" placeholder="Envoie un message…" rows="1" disabled
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>➤</button>
+      </div>
+      <div class="input-hint">Entrée pour envoyer · Shift+Entrée pour nouvelle ligne · /reset pour réinitialiser</div>
+    </div>
+  </main>
+</div>
+
+<script>
+marked.setOptions({breaks:true, gfm:true});
+
+// ── Auth guard ────────────────────────────────────────────────────────────────
+const token  = localStorage.getItem('token');
+const user   = JSON.parse(localStorage.getItem('user')  || 'null');
+const tenant = JSON.parse(localStorage.getItem('tenant') || 'null');
+if (!token) location.href = '/login';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let ws = null, currentAgent = null, isBusy = false, chatHistory = [];
+let streamMsgEl = null, streamBubbleEl = null, streamBadgesEl = null, streamRaw = '';
+let agents = [];
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // Header
+  if (user) {
+    document.getElementById('userEmail').textContent = user.email;
+    document.getElementById('userAvatar').textContent = (user.full_name || user.email)[0].toUpperCase();
+  }
+  if (tenant) document.getElementById('tenantName').textContent = tenant.name;
+
+  // Load agents
+  try {
+    const r = await fetch('/agents'); const d = await r.json(); agents = d.agents;
+    renderNav();
+  } catch {}
+
+  // Load profile
+  loadProfile();
+});
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+function renderNav() {
+  const c = document.getElementById('navAgents'); c.innerHTML = '';
+  agents.forEach(a => {
+    const d = document.createElement('div');
+    d.className = 'nav-item'; d.id = `nav-${a.type}`; d.onclick = () => selectAgent(a);
+    d.innerHTML = `<span class="ni-icon">${a.icon}</span> ${a.name} <span class="ni-badge">Live</span>`;
+    c.appendChild(d);
+  });
+}
+
+function selectAgent(agent) {
+  if (currentAgent?.type === agent.type) return;
+  currentAgent = agent; chatHistory = [];
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`nav-${agent.type}`)?.classList.add('active');
+  document.getElementById('agentInfo').innerHTML = `
+    <div class="agent-icon-big">${agent.icon}</div>
+    <div>
+      <div class="agent-title">${agent.name}</div>
+      <div class="agent-caps">${agent.capabilities.map(c=>`<span class="chip">${c}</span>`).join('')}</div>
+    </div>`;
+  document.getElementById('resetBtn').style.display = 'flex';
+  document.getElementById('exportBtn').style.display = 'flex';
+  clearChat(); showWelcome(agent); connectWS(agent.type);
+}
+
+// ── WebSocket ──────────────────────────────────────────────────────────────────
+function connectWS(type) {
+  if (ws) { ws.close(); ws = null; }
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws/${type}?token=${encodeURIComponent(token)}`);
+  ws.onclose = () => { if (!isBusy) enableInput(); };
+  ws.onerror = () => {};
+  ws.onmessage = e => handleEvent(JSON.parse(e.data));
+}
+
+function handleEvent(msg) {
+  switch (msg.type) {
+    case 'session_created': enableInput(); break;
+    case 'tool_call':   ensureStream(); addBadge(msg.name, 'running'); break;
+    case 'tool_result': markBadgeDone(msg.name); break;
+    case 'token':       ensureStream(); appendToken(msg.text); break;
+    case 'end':         finalizeStream(); enableInput(); break;
+    case 'reset':       finalizeStream(); clearChat(); showWelcome(currentAgent); chatHistory=[]; enableInput(); break;
+    case 'error':       finalizeStream(); appendAgentMsg(`⚠️ **Erreur :** ${msg.message}`); enableInput(); break;
+  }
+}
+
+// ── Streaming ─────────────────────────────────────────────────────────────────
+function ensureStream() {
+  if (streamMsgEl) return;
+  const ca = document.getElementById('chatArea');
+  const d = document.createElement('div'); d.className = 'message agent';
+  const badges = document.createElement('div'); badges.className = 'tool-badges';
+  const bubble = document.createElement('div'); bubble.className = 'bubble';
+  bubble.innerHTML = '<span class="cursor"></span>';
+  const body = document.createElement('div'); body.className = 'msg-body';
+  body.appendChild(badges); body.appendChild(bubble);
+  d.innerHTML = `<div class="avatar">${currentAgent?.icon||'🤖'}</div>`;
+  d.appendChild(body); ca.appendChild(d); ca.scrollTop = ca.scrollHeight;
+  streamMsgEl = d; streamBubbleEl = bubble; streamBadgesEl = badges; streamRaw = '';
+}
+function appendToken(t) {
+  streamRaw += t;
+  streamBubbleEl.innerHTML = marked.parse(streamRaw) + '<span class="cursor"></span>';
+  document.getElementById('chatArea').scrollTop = 99999;
+}
+function finalizeStream() {
+  if (!streamMsgEl) return;
+  const t = streamRaw, time = now();
+  streamBubbleEl.innerHTML = marked.parse(t) || '';
+  const body = streamMsgEl.querySelector('.msg-body');
+  const meta = document.createElement('div'); meta.className = 'msg-meta';
+  meta.innerHTML = `<span class="timestamp">${time}</span><button class="copy-btn" onclick="copyTxt(this,${JSON.stringify(t)})">Copier</button>`;
+  body.appendChild(meta);
+  if (t) chatHistory.push({role:'agent', text:t, time});
+  streamMsgEl = streamBubbleEl = streamBadgesEl = null; streamRaw = '';
+}
+function addBadge(name, state) {
+  if (!streamBadgesEl) return;
+  const b = document.createElement('div'); b.className = `tool-badge ${state}`;
+  b.setAttribute('data-tool', name); b.innerHTML = `⚙️ ${name.replace(/_/g,' ')}`;
+  streamBadgesEl.appendChild(b);
+}
+function markBadgeDone(name) {
+  if (!streamBadgesEl) return;
+  const bs = streamBadgesEl.querySelectorAll(`.tool-badge.running[data-tool="${name}"]`);
+  const last = bs[bs.length-1]; if (!last) return;
+  last.className = 'tool-badge done'; last.innerHTML = `✅ ${name.replace(/_/g,' ')}`;
+}
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+function appendAgentMsg(md) {
+  const ca = document.getElementById('chatArea'), time = now();
+  const d = document.createElement('div'); d.className = 'message agent';
+  d.innerHTML = `<div class="avatar">${currentAgent?.icon||'🤖'}</div>
+    <div class="msg-body">
+      <div class="bubble">${marked.parse(md)}</div>
+      <div class="msg-meta"><span class="timestamp">${time}</span><button class="copy-btn" onclick="copyTxt(this,${JSON.stringify(md)})">Copier</button></div>
+    </div>`;
+  ca.appendChild(d); ca.scrollTop = ca.scrollHeight;
+  chatHistory.push({role:'agent', text:md, time});
+}
+
+// ── Send ──────────────────────────────────────────────────────────────────────
+function sendMessage() {
+  const inp = document.getElementById('msgInput');
+  const text = inp.value.trim();
+  if (!text || !ws || ws.readyState !== WebSocket.OPEN || isBusy) return;
+  document.getElementById('welcomeScreen')?.remove();
+  const time = now();
+  const ca = document.getElementById('chatArea');
+  const d = document.createElement('div'); d.className = 'message user';
+  d.innerHTML = `<div class="avatar">👤</div>
+    <div class="msg-body">
+      <div class="bubble">${escHtml(text)}</div>
+      <div class="msg-meta"><span class="timestamp">${time}</span><button class="copy-btn" onclick="copyTxt(this,${JSON.stringify(text)})">Copier</button></div>
+    </div>`;
+  ca.appendChild(d); ca.scrollTop = ca.scrollHeight;
+  chatHistory.push({role:'user', text, time});
+  ws.send(JSON.stringify({message: text}));
+  inp.value = ''; inp.style.height = 'auto'; disableInput();
+}
+function handleKey(e) { if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+function resetConversation() { if (ws&&ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({message:'/reset'})); }
+
+// ── Welcome ───────────────────────────────────────────────────────────────────
+function showWelcome(agent) {
+  const ca = document.getElementById('chatArea');
+  const suggestions = getSuggestions(agent.type);
+  const d = document.createElement('div'); d.className = 'welcome'; d.id = 'welcomeScreen';
+  d.innerHTML = `<div class="welcome-icon">${agent.icon}</div>
+    <div class="welcome-title">${agent.name}</div>
+    <div class="welcome-sub">${agent.description}</div>
+    <div class="suggestion-grid">
+      ${suggestions.map(s=>`<div class="suggestion" onclick="useSug(${JSON.stringify(s.text)})"><strong>${s.title}</strong>${s.text}</div>`).join('')}
+    </div>`;
+  ca.appendChild(d);
+}
+function useSug(t) { document.getElementById('msgInput').value=t; sendMessage(); }
+function getSuggestions(type) {
+  return ({
+    support: [
+      {title:'📦 Commande',text:'Quel est le statut de ma commande CMD-48291 ?'},
+      {title:'↩️ Retour',text:'Comment retourner un article acheté il y a 2 semaines ?'},
+      {title:'💶 Remboursement',text:'Je veux être remboursé pour ma commande CMD-99102.'},
+      {title:'📞 Contact',text:'Comment puis-je joindre le service client ?'},
+    ],
+    sales: [
+      {title:'🔍 Analyser',text:'Analyse mon entreprise et identifie mes clients cibles.'},
+      {title:'🎯 Prospecter',text:'Trouve 5 prospects qualifiés pour mon secteur.'},
+      {title:'✉️ Email',text:'Génère un email de prospection pour une PME e-commerce.'},
+      {title:'📅 RDV',text:'Prépare-moi un script de rendez-vous commercial.'},
+    ],
+    automation: [
+      {title:'📊 Analyse',text:'Analyse les données de ventes Q1 2026.'},
+      {title:'📋 Rapport',text:'Génère un rapport mensuel des KPIs commerciaux.'},
+      {title:'🔔 Alerte',text:"Envoie une alerte critique à l'équipe ops."},
+      {title:'⚙️ Export',text:'Lance un export CSV des clients du mois.'},
+    ],
+    content: [
+      {title:'✍️ Article',text:"Écris un article SEO sur l'IA pour les PME."},
+      {title:'📱 LinkedIn',text:'Crée 5 posts LinkedIn pour notre lancement.'},
+      {title:'🎯 Campagne',text:'Planifie une campagne marketing sur 3 mois.'},
+      {title:'💡 Idées',text:'Génère 10 idées de contenu pour notre blog.'},
+    ],
+  })[type] || [];
+}
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+function openProfile()  { document.getElementById('profileOverlay').classList.add('open'); }
+function closeProfile() { document.getElementById('profileOverlay').classList.remove('open'); }
+function closeProfileIfOutside(e) { if (e.target===document.getElementById('profileOverlay')) closeProfile(); }
+
+async function loadProfile() {
+  try {
+    const r = await fetch('/profile', {headers:{'Authorization':`Bearer ${token}`}});
+    if (!r.ok) return;
+    const {profile} = await r.json();
+    if (!profile) return;
+    fillProfile(profile); updateProfileStatus(true);
+  } catch {}
+}
+
+function fillProfile(p) {
+  if (!p) return;
+  const s = (id, v) => { const el = document.getElementById(id); if(el&&v!==null&&v!==undefined) el.value=v; };
+  s('pCompany', p.company_name); s('pWebsite', p.website); s('pSector', p.sector);
+  s('pDesc', p.description); s('pFaq', p.faq);
+  s('pServices',  Array.isArray(p.services)      ? p.services.join('\n')      : p.services || '');
+  s('pTargets',   Array.isArray(p.target_clients) ? p.target_clients.join('\n') : p.target_clients || '');
+  s('pRules',     Array.isArray(p.rules)          ? p.rules.join('\n')          : p.rules || '');
+  s('pCodes',     Array.isArray(p.promo_codes)    ? p.promo_codes.join('\n')    : p.promo_codes || '');
+  if (p.tone) document.getElementById('pTone').value = p.tone;
+}
+
+async function saveProfile() {
+  const split = id => document.getElementById(id).value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const payload = {
+    company_name:   document.getElementById('pCompany').value.trim(),
+    website:        document.getElementById('pWebsite').value.trim(),
+    sector:         document.getElementById('pSector').value.trim(),
+    description:    document.getElementById('pDesc').value.trim(),
+    tone:           document.getElementById('pTone').value,
+    faq:            document.getElementById('pFaq').value.trim(),
+    services:       split('pServices'),
+    target_clients: split('pTargets'),
+    rules:          split('pRules'),
+    promo_codes:    split('pCodes'),
+  };
+  try {
+    const r = await fetch('/profile', {
+      method:'PUT', headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error();
+    document.getElementById('panelSuccess').style.display = 'block';
+    updateProfileStatus(true);
+    setTimeout(()=>{ document.getElementById('panelSuccess').style.display='none'; closeProfile(); reconnectIfActive(); }, 2000);
+  } catch { alert('Erreur lors de la sauvegarde'); }
+}
+
+function updateProfileStatus(complete) {
+  const bar = document.getElementById('profileStatusBar');
+  bar.className = complete ? 'profile-status complete' : 'profile-status';
+  bar.innerHTML = complete ? '✅ Profil entreprise configuré' : '⚠️ Complétez votre profil pour personnaliser vos agents';
+}
+
+function reconnectIfActive() {
+  if (currentAgent) { clearChat(); showWelcome(currentAgent); connectWS(currentAgent.type); }
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function clearChat() { document.getElementById('chatArea').innerHTML=''; streamMsgEl=streamBubbleEl=streamBadgesEl=null; streamRaw=''; }
+function enableInput()  { isBusy=false; const i=document.getElementById('msgInput'),b=document.getElementById('sendBtn'); i.disabled=false;b.disabled=false;i.focus(); }
+function disableInput() { isBusy=true; document.getElementById('msgInput').disabled=true; document.getElementById('sendBtn').disabled=true; }
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,130)+'px'; }
+function now() { return new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+async function copyTxt(btn, text) { try { await navigator.clipboard.writeText(text); btn.textContent='✓';setTimeout(()=>btn.textContent='Copier',1500); } catch{} }
+function exportChat() {
+  if (!chatHistory.length) return;
+  const lines = [`Conversation — ${currentAgent?.name}`, new Date().toLocaleString('fr-FR'), '─'.repeat(60), ''];
+  chatHistory.forEach(m => { lines.push(`[${m.time}] ${m.role==='user'?'Vous':currentAgent?.name||'Agent'}:`); lines.push(m.text); lines.push(''); });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'}));
+  a.download = `conv-${currentAgent?.type}-${Date.now()}.txt`; a.click();
+}
+function logout() { localStorage.clear(); location.href='/login'; }
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "id": "demo-saas",
+  "company": "DataFlow CRM",
+  "sector": "SaaS B2B — logiciel de gestion de la relation client",
+  "language": "fr",
+  "tone": "professionnel, direct, tutoiement",
+  "products": ["DataFlow Starter (49€/mois)", "DataFlow Pro (149€/mois)", "DataFlow Enterprise (sur devis)"],
+  "price_range": "49€ - 500€/mois",
+  "policies": {
+    "trial": "Essai gratuit 14 jours, sans CB",
+    "cancellation": "Résiliation possible à tout moment, sans frais",
+    "support": "Support par chat (toutes formules) + téléphone (Pro et Enterprise)",
+    "sla": "99.9% de disponibilité garantie, remboursement si non respecté"
+  },
+  "faq": [
+    "L'import depuis Salesforce, HubSpot et Pipedrive est inclus dès la formule Starter",
+    "Le nombre d'utilisateurs est illimité sur toutes les formules",
+    "Les données sont hébergées en France (conformité RGPD)",
+    "L'API REST est disponible à partir de la formule Pro",
+    "La formation onboarding est incluse dans la formule Enterprise"
+  ],
+  "rules": [
+    "Toujours proposer la démo de 30 min en visio pour les prospects chauds",
+    "Ne jamais citer les tarifs concurrents",
+    "Pour les entreprises de plus de 50 employés, rediriger vers l'offre Enterprise",
+    "Mentionner systématiquement l'essai gratuit 14 jours pour les prospects hésitants",
+    "Les demandes de remise supérieure à 20% doivent être validées par un commercial"
+  ],
+  "promo_codes": ["STARTUP50 (-50% pendant 3 mois pour les startups)", "ANNUEL20 (-20% pour tout engagement annuel)"],
+  "contact": {
+    "email": "hello@dataflow-crm.io",
+    "demo_link": "https://cal.com/dataflow/demo",
+    "support": "support@dataflow-crm.io"
+  }
+}
