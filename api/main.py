@@ -55,19 +55,28 @@ FRONTEND = os.path.join(os.path.dirname(__file__), "..", "frontend")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    # Pre-warm Groq HTTP connection so the first user request doesn't fail
-    # after a Render free-tier cold start (service spins down after 15 min).
-    try:
-        from groq import AsyncGroq
-        _gc = AsyncGroq(api_key=settings.groq_api_key)
-        await _gc.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": "hi"}],
-            max_tokens=1,
-        )
-        logger.info("Groq connection pre-warmed successfully")
-    except Exception as _e:
-        logger.warning("Groq pre-warm failed (non-fatal): %s", _e)
+    # Pre-warm Groq in background (non-blocking) so startup doesn't delay health checks.
+    # On Render free tier the Docker build already eats most of the deploy window,
+    # so we must not block here — fire and forget with a hard 8-second cap.
+    async def _prewarm():
+        try:
+            import httpx
+            from groq import AsyncGroq
+            _gc = AsyncGroq(
+                api_key=settings.groq_api_key,
+                timeout=httpx.Timeout(connect=5.0, read=8.0, write=5.0, pool=5.0),
+            )
+            await _gc.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": "hi"}],
+                max_tokens=1,
+            )
+            logger.info("Groq connection pre-warmed successfully")
+        except Exception as _e:
+            logger.warning("Groq pre-warm failed (non-fatal): %s", _e)
+
+    import asyncio as _asyncio
+    _asyncio.create_task(_prewarm())
     logger.info("%s v%s — SaaS mode ready", settings.app_name, settings.app_version)
     yield
 
