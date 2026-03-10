@@ -54,10 +54,34 @@ FRONTEND = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Fast: CREATE TABLE IF NOT EXISTS only — no ALTER TABLE, no lock contention.
     init_db()
-    # Pre-warm Groq in background (non-blocking) so startup doesn't delay health checks.
-    # On Render free tier the Docker build already eats most of the deploy window,
-    # so we must not block here — fire and forget with a hard 8-second cap.
+
+    # ── Background: DB column migrations with retry ─────────────────────────
+    # ALTER TABLE … ADD COLUMN needs ACCESS EXCLUSIVE lock.  During a rolling
+    # deploy the old instance holds connections that can block it for minutes.
+    # Running migrations in a background task lets the app yield immediately,
+    # pass Render's /health check, and trigger the old-instance shutdown.
+    # Once the old instance is gone the lock is free and the next retry succeeds.
+    async def _migrate_with_retry():
+        import asyncio as _aio
+        from database.database import run_migrations
+        attempt = 0
+        while True:
+            try:
+                await _aio.to_thread(run_migrations)
+                logger.info("DB migrations applied successfully (attempt %d)", attempt + 1)
+                return
+            except Exception as exc:
+                attempt += 1
+                wait = min(20, attempt * 4)   # 4 s, 8 s, 12 s, 16 s, 20 s …
+                logger.info(
+                    "Migration blocked (attempt %d) — retry in %ds: %s",
+                    attempt, wait, exc,
+                )
+                await _aio.sleep(wait)
+
+    # ── Background: pre-warm Groq connection ───────────────────────────────
     async def _prewarm():
         try:
             import httpx
@@ -76,6 +100,7 @@ async def lifespan(app: FastAPI):
             logger.warning("Groq pre-warm failed (non-fatal): %s", _e)
 
     import asyncio as _asyncio
+    _asyncio.create_task(_migrate_with_retry())
     _asyncio.create_task(_prewarm())
     logger.info("%s v%s — SaaS mode ready", settings.app_name, settings.app_version)
     yield

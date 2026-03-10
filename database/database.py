@@ -23,11 +23,34 @@ def get_db():
 def init_db():
     from database import models  # noqa: F401 — import to register models
     Base.metadata.create_all(bind=engine)
+    # NOTE: _migrate_db() is intentionally NOT called here.
+    # It is executed via run_migrations() from a background retry-loop in
+    # api/main.py so that startup is never blocked by PostgreSQL lock contention
+    # with the old running instance during a rolling Render deploy.
+
+
+def run_migrations():
+    """Run idempotent column migrations.
+
+    Designed to be called from a background retry-loop (see api/main.py).
+    * Skips columns that already exist   → truly idempotent, no lock needed.
+    * Uses lock_timeout = '3s' for missing columns → fails fast instead of
+      blocking forever; raises on lock failure so the caller can back off and
+      retry.
+    Safe to call multiple times.
+    """
     _migrate_db()
 
 
 def _migrate_db():
-    """Add new columns to existing tables without Alembic (idempotent)."""
+    """Add new columns to existing tables without Alembic.
+
+    For each column:
+      - Already exists  → skip (cheap read, no table lock).
+      - Missing         → ALTER TABLE … ADD COLUMN with lock_timeout = '3s'.
+                          Raises sqlalchemy.exc.OperationalError (LockNotAvailable)
+                          on timeout — let the caller retry.
+    """
     from sqlalchemy import text
     new_columns = [
         ("tenants", "plan",                   "VARCHAR(20)  DEFAULT 'free'"),
@@ -40,16 +63,30 @@ def _migrate_db():
         ("users",   "email_verify_token",     "VARCHAR(64)"),
     ]
     with engine.connect() as conn:
-        # Prevent indefinite blocking if another process holds a table lock.
-        # With lock_timeout, ALTER TABLE fails fast instead of waiting forever.
+        # Short lock_timeout: ALTER TABLE raises LockNotAvailable instead of
+        # blocking indefinitely.  The retry-loop in main.py handles it.
         if not DATABASE_URL.startswith("sqlite"):
-            try:
-                conn.execute(text("SET lock_timeout = '5s'"))
-            except Exception:
-                pass
+            conn.execute(text("SET lock_timeout = '3s'"))
+
         for table, col, col_type in new_columns:
-            try:
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
-                conn.commit()
-            except Exception:
-                conn.rollback()  # column already exists or lock timeout — safe to ignore
+            # ── 1. Check existence (read-only, no table lock needed) ─────────
+            if DATABASE_URL.startswith("sqlite"):
+                rows = conn.execute(text(f"PRAGMA table_info({table})")).fetchall()
+                if any(r[1] == col for r in rows):
+                    continue
+            else:
+                row = conn.execute(
+                    text(
+                        "SELECT 1 FROM information_schema.columns "
+                        "WHERE table_name = :t AND column_name = :c"
+                    ),
+                    {"t": table, "c": col},
+                ).fetchone()
+                if row is not None:
+                    continue  # already exists — nothing to do
+
+            # ── 2. Column is genuinely missing — add it ──────────────────────
+            # May raise OperationalError (LockNotAvailable) if lock_timeout
+            # fires; propagates to the caller's retry-loop.
+            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+            conn.commit()
