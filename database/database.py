@@ -40,9 +40,16 @@ def _migrate_db():
         ("users",   "email_verify_token",     "VARCHAR(64)"),
     ]
     with engine.connect() as conn:
+        # Prevent indefinite blocking if another process holds a table lock.
+        # With lock_timeout, ALTER TABLE fails fast instead of waiting forever.
+        if not DATABASE_URL.startswith("sqlite"):
+            try:
+                conn.execute(text("SET lock_timeout = '5s'"))
+            except Exception:
+                pass
         for table, col, col_type in new_columns:
             try:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
                 conn.commit()
             except Exception:
-                conn.rollback()  # column already exists — safe to ignore
+                conn.rollback()  # column already exists or lock timeout — safe to ignore
