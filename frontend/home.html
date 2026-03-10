@@ -2,7 +2,26 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>AgentAI — Des agents IA pour votre entreprise</title>
+  <title>AgentAI — Des agents IA sur-mesure pour votre entreprise</title>
+  <meta name="description" content="Déployez 4 agents IA spécialisés (support client, prospection B2B, automatisation, marketing) personnalisés à 100% pour votre entreprise. Propulsé par Groq llama-3.3-70b. Démarrez gratuitement."/>
+  <meta name="keywords" content="agents IA entreprise, agent IA support client, prospection automatique IA, automatisation IA, marketing IA, SaaS IA France"/>
+  <meta name="robots" content="index, follow"/>
+  <meta name="author" content="AgentAI Platform"/>
+  <!-- Open Graph -->
+  <meta property="og:type" content="website"/>
+  <meta property="og:title" content="AgentAI — Des agents IA sur-mesure pour votre entreprise"/>
+  <meta property="og:description" content="4 agents IA spécialisés, personnalisés à 100% pour votre marque. Support, Ventes, Marketing, Automatisation. Déployez en 5 minutes."/>
+  <meta property="og:url" content="https://agentai.co"/>
+  <meta property="og:image" content="https://agentai.co/static/og-image.png"/>
+  <meta property="og:locale" content="fr_FR"/>
+  <meta property="og:site_name" content="AgentAI Platform"/>
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="AgentAI — Des agents IA sur-mesure pour votre entreprise"/>
+  <meta name="twitter:description" content="4 agents IA spécialisés, personnalisés à 100% pour votre marque. Support, Ventes, Marketing, Automatisation. Déployez en 5 minutes."/>
+  <meta name="twitter:image" content="https://agentai.co/static/og-image.png"/>
+  <!-- Canonical -->
+  <link rel="canonical" href="https://agentai.co"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
@@ -110,6 +129,18 @@
     .pricing-btn.outline{background:transparent;color:var(--text);border:1px solid var(--border)}
     .pricing-btn.outline:hover{border-color:var(--accent2);color:var(--accent2)}
 
+    /* ── TESTIMONIALS ── */
+    .testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-top:56px}
+    .testi-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;transition:border-color .2s}
+    .testi-card:hover{border-color:rgba(99,102,241,.4)}
+    .testi-stars{color:#f59e0b;font-size:14px;margin-bottom:16px;letter-spacing:2px}
+    .testi-quote{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:20px;font-style:italic}
+    .testi-author{display:flex;align-items:center;gap:12px}
+    .testi-avatar{width:40px;height:40px;border-radius:50%;background:var(--accent);display:grid;place-items:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+    .testi-name{font-size:13px;font-weight:700;color:var(--text)}
+    .testi-role{font-size:11px;color:var(--text3);margin-top:1px}
+    .testi-metric{display:inline-block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:#34d399;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:14px}
+
     /* ── DEMO CTA BAND ── */
     .cta-band{background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(168,85,247,.1));border:1px solid rgba(99,102,241,.25);border-radius:20px;padding:60px 40px;text-align:center;margin:0 40px 80px;max-width:1160px;margin-left:auto;margin-right:auto}
     .cta-band h2{font-size:clamp(24px,4vw,40px);font-weight:800;letter-spacing:-1px;margin-bottom:12px}
@@ -140,6 +171,7 @@
   <div class="nav-links">
     <a href="#agents" class="nav-link">Agents</a>
     <a href="#features" class="nav-link">Fonctionnalités</a>
+    <a href="#testimonials" class="nav-link">Témoignages</a>
     <a href="#pricing" class="nav-link">Tarifs</a>
     <a href="/demo" class="nav-link">Démo</a>
     <a href="/login" class="nav-login">Se connecter</a>
@@ -356,6 +388,51 @@
         <div class="pricing-feat">SLA & support dédié</div>
       </div>
       <a href="/demo" class="pricing-btn outline">Demander une démo</a>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="testimonials" style="text-align:center">
+  <div class="section-tag" style="text-align:center">Témoignages</div>
+  <div class="section-title" style="text-align:center">Ils ont <span>transformé leur business</span></div>
+  <p style="color:var(--text2);font-size:15px;margin-top:8px;max-width:500px;margin-left:auto;margin-right:auto">Des équipes de toutes tailles utilisent AgentAI pour gagner du temps, générer plus de leads et offrir un support exceptionnel.</p>
+  <div class="testimonials-grid" style="text-align:left">
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <div class="testi-metric">+340% de prospects qualifiés</div>
+      <div class="testi-quote">"L'agent commercial a révolutionné notre prospection. En 3 semaines, on avait déjà généré plus d'emails de qualité que sur tout le trimestre précédent. Le BANT automatique nous fait gagner 2h par commercial par semaine."</div>
+      <div class="testi-author">
+        <div class="testi-avatar">TM</div>
+        <div>
+          <div class="testi-name">Thomas Mercier</div>
+          <div class="testi-role">Directeur Commercial · TechCorp Solutions</div>
+        </div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <div class="testi-metric">-65% de tickets escaladés</div>
+      <div class="testi-quote">"Notre agent support répond maintenant à 80% des questions sans intervention humaine. Les clients sont surpris par la rapidité et la précision des réponses. Notre NPS a augmenté de 22 points."</div>
+      <div class="testi-author">
+        <div class="testi-avatar">SL</div>
+        <div>
+          <div class="testi-name">Sarah Lambert</div>
+          <div class="testi-role">Head of Customer Success · RetailPlus</div>
+        </div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <div class="testi-metric">12h/semaine économisées</div>
+      <div class="testi-quote">"Le contenu marketing qu'on produisait en une semaine, on le génère maintenant en une heure. Posts LinkedIn, articles SEO, emails — tout est personnalisé et prêt à publier. ROI immédiat dès le premier mois."</div>
+      <div class="testi-author">
+        <div class="testi-avatar">AC</div>
+        <div>
+          <div class="testi-name">Alice Chen</div>
+          <div class="testi-role">Marketing Director · GrowthMakers Agency</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>

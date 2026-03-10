@@ -1,4 +1,4 @@
-"""Base agent — Groq with llama-3.1-8b-instant (fastest available model). Sync + async streaming."""
+"""Base agent — Groq with llama-3.3-70b-versatile. Sync + async streaming."""
 import asyncio
 import json
 import re
@@ -11,9 +11,9 @@ _RETRYABLE = ("connect", "timeout", "network", "temporarily", "service unavailab
 
 
 class BaseAgent:
-    # llama-3.1-8b-instant: fastest Groq model, always available,
-    # ~800-1200 tok/s, time-to-first-token < 200 ms.
-    MODEL = "llama-3.1-8b-instant"
+    # llama-3.3-70b-versatile: best quality/speed Groq model.
+    # ~400-600 tok/s, excellent reasoning and tool use.
+    MODEL = "llama-3.3-70b-versatile"
     MAX_TOKENS = 2048
     MAX_TOOL_ITERATIONS = 6
     # Keep only the last N messages to prevent context-window overflow.

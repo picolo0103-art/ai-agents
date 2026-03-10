@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 _EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
 
 from api.auth import clear_auth_cookie, create_token, get_current_user, set_auth_cookie
-from api.email import APP_URL, send_reset_email, send_verify_email
+from api.email import APP_URL, send_reset_email, send_verify_email, send_welcome_email
 from api.limiter import limiter
 from database.crud import (authenticate, consume_reset_token, consume_verify_token,
                             create_reset_token, create_tenant, create_user,
@@ -168,11 +168,14 @@ def me(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/verify-email")
-def verify_email(token: str, db: Session = Depends(get_db)):
-    """Consume the one-time email verification token."""
-    ok = consume_verify_token(db, token)
-    if not ok:
+async def verify_email(token: str, db: Session = Depends(get_db)):
+    """Consume the one-time email verification token and send welcome email."""
+    import asyncio
+    user = consume_verify_token(db, token)
+    if not user:
         raise HTTPException(400, "Lien invalide ou expiré. Reconnectez-vous pour recevoir un nouveau lien.")
+    company_name = user.tenant.company_name if user.tenant else "votre entreprise"
+    asyncio.create_task(send_welcome_email(user.email, company_name))
     return {"message": "Email vérifié avec succès ! Vous pouvez maintenant utiliser toutes les fonctionnalités."}
 
 

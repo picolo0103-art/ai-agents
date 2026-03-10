@@ -70,6 +70,72 @@ def _verify_html(verify_url: str) -> str:
 </html>"""
 
 
+def _welcome_html(company_name: str, dashboard_url: str) -> str:
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8" /></head>
+<body style="font-family:Inter,sans-serif;background:#0f1117;color:#e2e8f0;margin:0;padding:40px 0">
+  <div style="max-width:520px;margin:0 auto;background:#1a1d27;border-radius:16px;border:1px solid #2e3147;overflow:hidden">
+    <div style="background:linear-gradient(135deg,#6366f1,#818cf8);padding:32px;text-align:center">
+      <div style="font-size:36px;margin-bottom:8px">🤖</div>
+      <div style="font-size:20px;font-weight:700;color:#fff">Bienvenue sur AgentAI Platform</div>
+    </div>
+    <div style="padding:32px">
+      <h2 style="margin:0 0 12px;font-size:20px;color:#e2e8f0">Votre espace est prêt, {company_name} ! 🚀</h2>
+      <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0 0 24px">
+        Vos 4 agents IA sont configurés et prêts à travailler pour vous.<br/>
+        Commencez par personnaliser votre profil entreprise pour des résultats optimaux.
+      </p>
+      <div style="background:#242736;border-radius:12px;padding:20px;margin-bottom:24px">
+        <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#e2e8f0">Vos agents disponibles :</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:13px;color:#94a3b8">🎧 <strong style="color:#e2e8f0">Support Client</strong> — Répond 24h/24 à vos clients</div>
+          <div style="font-size:13px;color:#94a3b8">📈 <strong style="color:#e2e8f0">Sales & Prospection</strong> — Emails et scripts de vente BANT</div>
+          <div style="font-size:13px;color:#94a3b8">⚙️ <strong style="color:#e2e8f0">Automatisation</strong> — Rapports et analyse de données</div>
+          <div style="font-size:13px;color:#94a3b8">✍️ <strong style="color:#e2e8f0">Marketing & Contenu</strong> — Articles, posts, campagnes</div>
+        </div>
+      </div>
+      <a href="{dashboard_url}" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;font-size:14px">
+        Accéder à mon tableau de bord →
+      </a>
+      <p style="color:#64748b;font-size:12px;margin:24px 0 0">
+        Des questions ? Répondez directement à cet email, on est là pour vous aider.<br/>
+        <a href="{dashboard_url}" style="color:#818cf8">AgentAI Platform</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>"""
+
+
+async def send_welcome_email(to_email: str, company_name: str) -> bool:
+    """Send welcome email after successful email verification."""
+    dashboard_url = f"{APP_URL}/dashboard"
+    if not RESEND_API_KEY:
+        logger.info("[DEV — no RESEND_API_KEY] Welcome email for %s (%s)", to_email, company_name)
+        return True
+    payload = {
+        "from":    RESEND_FROM,
+        "to":      [to_email],
+        "subject": f"Bienvenue sur AgentAI, {company_name} ! Vos agents sont prêts 🚀",
+        "html":    _welcome_html(company_name, dashboard_url),
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            res = await client.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {RESEND_API_KEY}",
+                         "Content-Type": "application/json"},
+                json=payload,
+            )
+            if res.status_code not in (200, 201):
+                logger.error("Resend error %s: %s", res.status_code, res.text)
+            return True
+    except Exception as exc:
+        logger.error("Welcome email send failed: %s", exc, exc_info=True)
+        return True
+
+
 async def send_verify_email(to_email: str, verify_url: str) -> bool:
     """Send email-verification link. Falls back to console log in dev mode."""
     if not RESEND_API_KEY:

@@ -254,14 +254,15 @@ def create_verify_token(db: Session, user_id: str) -> str:
     return token
 
 
-def consume_verify_token(db: Session, token: str) -> bool:
+def consume_verify_token(db: Session, token: str):
+    """Return the verified User on success, None on failure."""
     u = db.query(User).filter(User.email_verify_token == token).first()
     if not u:
-        return False
+        return None
     u.email_verified     = True
     u.email_verify_token = None
     db.commit()
-    return True
+    return u
 
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
