@@ -580,7 +580,7 @@ function handleEvent(ev) {
 
 async function startUpgrade(plan='pro') {
   try {
-    const res  = await fetch('/billing/checkout?plan='+plan, {method:'POST'});
+    const res  = await apiFetch('/billing/checkout?plan='+plan, {method:'POST'});
     const data = await res.json();
     if (data.checkout_url) {
       window.location.href = data.checkout_url;
@@ -592,7 +592,7 @@ async function startUpgrade(plan='pro') {
 
 async function openBillingPortal() {
   try {
-    const res  = await fetch('/billing/portal', {method:'POST'});
+    const res  = await apiFetch('/billing/portal', {method:'POST'});
     const data = await res.json();
     if (data.portal_url) window.location.href = data.portal_url;
   } catch(e) { appendSystemMsg('❌ Impossible d\'ouvrir le portail de facturation.'); }

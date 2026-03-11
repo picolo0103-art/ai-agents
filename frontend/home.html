@@ -463,8 +463,16 @@
 
 <script>
 async function startCheckout(plan) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    window.location.href = '/login?plan=' + plan;
+    return;
+  }
   try {
-    const res = await fetch('/billing/checkout?plan=' + plan, {method: 'POST'});
+    const res = await fetch('/billing/checkout?plan=' + plan, {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + token}
+    });
     if (res.status === 401) {
       window.location.href = '/login?plan=' + plan;
       return;
