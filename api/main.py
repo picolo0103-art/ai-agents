@@ -167,7 +167,8 @@ def privacy_page():  return _html("privacy.html")
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": settings.app_version, "mode": "saas"}
+    stripe_ok = bool(os.getenv("STRIPE_SECRET_KEY", "").strip())
+    return {"status": "ok", "version": settings.app_version, "mode": "saas", "stripe": stripe_ok}
 
 
 @app.get("/agents")
