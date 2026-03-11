@@ -582,7 +582,11 @@ async function startUpgrade(plan='pro') {
   try {
     const res  = await fetch('/billing/checkout?plan='+plan, {method:'POST'});
     const data = await res.json();
-    if (data.checkout_url) window.location.href = data.checkout_url;
+    if (data.checkout_url) {
+      window.location.href = data.checkout_url;
+    } else {
+      appendSystemMsg('❌ ' + (data.detail || 'Impossible de créer la session de paiement. Vérifiez la configuration Stripe.'));
+    }
   } catch(e) { appendSystemMsg('❌ Erreur lors de la redirection vers le paiement.'); }
 }
 

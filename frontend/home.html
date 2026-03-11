@@ -470,8 +470,11 @@ async function startCheckout(plan) {
       return;
     }
     const data = await res.json();
-    if (data.checkout_url) window.location.href = data.checkout_url;
-    else window.location.href = '/login?plan=' + plan;
+    if (data.checkout_url) {
+      window.location.href = data.checkout_url;
+    } else {
+      alert('Erreur : ' + (data.detail || 'Impossible de créer la session de paiement. Réessayez dans quelques secondes.'));
+    }
   } catch(e) {
     window.location.href = '/login?plan=' + plan;
   }

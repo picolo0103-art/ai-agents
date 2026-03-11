@@ -120,8 +120,11 @@
 </div>
 
 <script>
-  // Redirect if already logged in
-  if (localStorage.getItem('token')) location.href = '/dashboard';
+  // Redirect if already logged in (preserve ?plan= to trigger checkout)
+  if (localStorage.getItem('token')) {
+    const _plan = new URLSearchParams(location.search).get('plan');
+    location.href = _plan ? '/dashboard?plan=' + _plan : '/dashboard';
+  }
 
   function showTab(tab) {
     document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
